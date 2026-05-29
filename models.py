@@ -27,6 +27,7 @@ class Avistamiento(Base):
     id_avistamiento = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     id_usuario = Column(UUID(as_uuid=True), ForeignKey("usuarios.id_usuario", ondelete="CASCADE"))
     especie = Column(String(10)) # Deberá ser 'Gato' o 'Perro'
+    color = Column(String(50), nullable=False)
     descripcion = Column(Text)
     latitud = Column(Numeric(9,6), nullable=False)
     longitud = Column(Numeric(9,6), nullable=False)
