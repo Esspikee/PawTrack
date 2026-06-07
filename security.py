@@ -2,11 +2,12 @@ from datetime import datetime, timedelta
 from typing import Optional
 from jose import jwt
 import bcrypt
+import config
 
-# CONFIGURACIÓN DEL TOKEN
-SECRET_KEY = "tu_clave_secreta_super_segura_para_el_proyecto_pawtrack"
-ALGORITHM = "HS256"
-ACCESS_TOKEN_EXPIRE_MINUTES = 60
+# JWT configuration is now loaded from config.py (which reads from environment variables)
+SECRET_KEY = config.SECRET_KEY
+ALGORITHM = config.ALGORITHM
+ACCESS_TOKEN_EXPIRE_MINUTES = config.ACCESS_TOKEN_EXPIRE_MINUTES
 
 # 1. Función para encriptar la contraseña
 def obtener_password_hasheado(password: str) -> str:

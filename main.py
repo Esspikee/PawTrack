@@ -2,6 +2,10 @@ from fastapi import FastAPI, Depends, HTTPException, Request, status
 from fastapi.responses import JSONResponse
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
+from slowapi import Limiter
+from slowapi.util import get_remote_address
+from slowapi.errors import RateLimitExceeded
+from slowapi.middleware import SlowAPIMiddleware
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from jose import JWTError, jwt
@@ -17,6 +21,12 @@ models.Base.metadata.create_all(bind=engine)
 
 # 2. Inicializamos la aplicación
 app = FastAPI(title="PawTrack API", description="API para el rastreo comunitario de mascotas")
+
+# Rate limiting (slowapi)
+limiter = Limiter(key_func=get_remote_address)
+app.state.limiter = limiter
+app.add_middleware(SlowAPIMiddleware)
+app.add_exception_handler(RateLimitExceeded, lambda request, exc: JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"}))
 
 # 🛡️ 3. Agregamos CORS para que el Frontend (React/Web) pueda conectarse sin bloqueos
 app.add_middleware(
@@ -39,10 +49,6 @@ AVISTAMIENTO_COOLDOWN_MINUTES = 5
 @app.exception_handler(IntegrityError)
 async def integrity_error_handler(request: Request, exc: IntegrityError):
     print(f"🔥 Error interceptado en la BD: {exc}")
-    # Aunque FastAPI cierra la conexión, forzar el rollback es una buena práctica
-    db = SessionLocal()
-    db.rollback()
-    db.close()
     return JSONResponse(
         status_code=400,
         content={
@@ -59,6 +65,15 @@ def get_db():
         yield db
     finally:
         db.close()
+
+
+def commit_db(db: Session):
+    try:
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+
 
 def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
     credentials_exception = HTTPException(
@@ -131,12 +146,14 @@ def obtener_perfil_usuario(current_user: models.Usuario = Depends(get_current_us
     """
     return current_user
 
-@app.get("/usuarios/", response_model=List[schemas.UsuarioResponse])
+@app.get("/usuarios/", response_model=List[schemas.UsuarioPublico])
 def obtener_usuarios(db: Session = Depends(get_db)):
     return db.query(models.Usuario).all()
 
 @app.post("/usuarios/", response_model=schemas.UsuarioResponse)
-def crear_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db)):
+@limiter.limit("3/minute")
+def crear_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db), request: Request = None):
+    """Crear nuevo usuario. Retorna datos completos incluyendo email al usuario que se registró."""
     hashed_pwd = security.obtener_password_hasheado(usuario.password)
     nuevo_usuario = models.Usuario(
         username=usuario.username, 
@@ -144,12 +161,13 @@ def crear_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db))
         password=hashed_pwd
     )
     db.add(nuevo_usuario)
-    db.commit()
+    commit_db(db)
     db.refresh(nuevo_usuario)
     return nuevo_usuario
 
 @app.post("/login", response_model=schemas.Token)
-def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+@limiter.limit("5/minute")
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db), request: Request = None):
     usuario_db = db.query(models.Usuario).filter(models.Usuario.email == form_data.username).first()
     if not usuario_db or not security.verificar_password(form_data.password, usuario_db.password):
         raise HTTPException(
@@ -216,7 +234,7 @@ def registrar_nuevo_animal(
     current_user.puntos_totales += 5
     actualizar_nivel_usuario(current_user, db)
 
-    db.commit()
+    commit_db(db)
     db.refresh(nuevo_animal)
     return nuevo_animal
 
@@ -237,7 +255,7 @@ def actualizar_animal(
     animal_db.color_principal = animal_actualizado.color_principal
     animal_db.foto_principal = animal_actualizado.foto_principal
 
-    db.commit()
+    commit_db(db)
     db.refresh(animal_db)
     return animal_db
 
@@ -284,7 +302,7 @@ def agregar_avistamiento(
     actualizar_nivel_usuario(current_user, db)
 
     # 6. Guardar transacción completa
-    db.commit()
+    commit_db(db)
     db.refresh(nuevo_avistamiento)
     return nuevo_avistamiento
 
@@ -335,7 +353,7 @@ def confirmar_avistamiento(
     current_user.puntos_totales += 1
     actualizar_nivel_usuario(current_user, db)
 
-    db.commit()
+    commit_db(db)
     db.refresh(nueva_confirmacion)
     
     return nueva_confirmacion
@@ -359,7 +377,7 @@ def eliminar_confirmacion(
     current_user.puntos_totales = max(0, current_user.puntos_totales - 1)
     actualizar_nivel_usuario(current_user, db)
 
-    db.commit()
+    commit_db(db)
     return {"mensaje": "Confirmación retirada exitosamente."}
 
 @app.get("/avistamientos/{id_avistamiento}/confirmaciones", response_model=schemas.ListaConfirmacionesResponse)

@@ -21,6 +21,20 @@ class UsuarioBase(BaseModel):
     username: str
     email: str
 
+class UsuarioPublico(BaseModel):
+    """Esquema seguro para listar usuarios públicamente (sin email)."""
+    id_usuario: uuid.UUID
+    username: str
+    puntos_totales: int
+    nivel_actual: int
+    fecha_creacion: datetime
+    animales_descubiertos: int
+    avistamientos_realizados: int
+    confirmaciones_realizadas: int
+
+    class Config:
+        from_attributes = True
+
 class UsuarioCreate(UsuarioBase):
     # 🛡️ Protección contra el bug de Bcrypt (Límite de 72 bytes)
     password: str = Field(..., max_length=70)
