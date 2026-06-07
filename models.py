@@ -17,6 +17,7 @@ class Usuario(Base):
     id_usuario = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
     username = Column(String(50), unique=True, nullable=False)
     email = Column(String(100), unique=True, nullable=False)
+    password = Column(String(255), nullable=False)
     puntos_totales = Column(Integer, default=0)
     nivel_actual = Column(Integer, ForeignKey("niveles.nivel"), default=1)
     fecha_creacion = Column(DateTime, default=lambda: datetime.now(timezone.utc))

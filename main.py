@@ -1,14 +1,39 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, Request
+from fastapi.responses import JSONResponse
+from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from sqlalchemy.orm import Session
+from sqlalchemy.exc import IntegrityError
 from typing import List
 
-import models
-import schemas
-from database import SessionLocal
+# Importaciones locales
+from database import engine, SessionLocal
+import models, schemas, security
 
+# 1. Le decimos a SQLAlchemy que construya las tablas si no existen
+models.Base.metadata.create_all(bind=engine)
+
+# 2. Inicializamos la aplicación
 app = FastAPI(title="PawTrack API", description="API para el rastreo comunitario de mascotas")
 
-# Dependencia para la sesión de base de datos
+# 3. Configuramos el sistema de seguridad (El candado)
+oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
+
+# ==========================================
+# MANEJO DE ERRORES GLOBALES
+# ==========================================
+@app.exception_handler(IntegrityError)
+async def integrity_error_handler(request: Request, exc: IntegrityError):
+    print(f"🔥 Error interceptado en la BD: {exc}")
+    return JSONResponse(
+        status_code=400,
+        content={
+            "detail": "Error de integridad de datos. Verifica que el payload enviado cumpla con las reglas de la BD o que no haya correos duplicados."
+        },
+    )
+
+# ==========================================
+# DEPENDENCIA DE BASE DE DATOS
+# ==========================================
 def get_db():
     db = SessionLocal()
     try:
@@ -16,97 +41,73 @@ def get_db():
     finally:
         db.close()
 
+# ==========================================
+# ENDPOINT DE INICIO
+# ==========================================
 @app.get("/")
 def inicio():
     return {"mensaje": "¡El servidor de PawTrack está vivo! 🐾"}
 
-
 # ==========================================
-# ENDPOINTS DE USUARIOS
+# ENDPOINTS DE USUARIOS Y LOGIN
 # ==========================================
-
 @app.get("/usuarios/", response_model=List[schemas.UsuarioResponse])
 def obtener_usuarios(db: Session = Depends(get_db)):
     return db.query(models.Usuario).all()
 
 @app.post("/usuarios/", response_model=schemas.UsuarioResponse)
 def crear_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db)):
-    # Verificar si el email ya está registrado
-    existe_email = db.query(models.Usuario).filter(models.Usuario.email == usuario.email).first()
-    if existe_email:
-        raise HTTPException(status_code=400, detail="El email ya está registrado")
-        
-    # Crear la instancia del modelo SQLAlchemy
+    # Encriptamos la contraseña
+    hashed_pwd = security.obtener_password_hasheado(usuario.password)
+    
+    # Alineado estrictamente con models.py
     nuevo_usuario = models.Usuario(
-        username=usuario.username,
-        email=usuario.email
+        username=usuario.username, 
+        email=usuario.email,       
+        password=hashed_pwd
     )
     
-    db.add(nuevo_usuario) # Preparar el guardado
-    db.commit()           # Guardar en la base de datos real
-    db.refresh(nuevo_usuario) # Traer el ID y fecha generados por Postgres
+    db.add(nuevo_usuario)
+    db.commit()
+    db.refresh(nuevo_usuario)
     return nuevo_usuario
-# ==========================================
-# ACTUALIZAR Y ELIMINAR AVISTAMIENTOS (PUT / DELETE)
-# ==========================================
 
-@app.put("/avistamientos/{id_avistamiento}", response_model=schemas.AvistamientoResponse)
-def actualizar_avistamiento(id_avistamiento: str, avistamiento_actualizado: schemas.AvistamientoCreate, db: Session = Depends(get_db)):
-    # 1. Buscamos si el avistamiento existe en la base de datos
-    avistamiento_db = db.query(models.Avistamiento).filter(models.Avistamiento.id_avistamiento == id_avistamiento).first()
+@app.post("/login")
+def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db)):
+    # Buscamos al usuario usando 'email' y 'password' que son los nombres actuales
+    usuario_db = db.query(models.Usuario).filter(models.Usuario.email == form_data.username).first()
     
-    if not avistamiento_db:
-        raise HTTPException(status_code=404, detail="El avistamiento no existe.")
-
-    # 2. Reemplazamos los datos viejos con los nuevos
-    avistamiento_db.especie = avistamiento_actualizado.especie
-    avistamiento_db.color = avistamiento_actualizado.color
-    avistamiento_db.descripcion = avistamiento_actualizado.descripcion
-    avistamiento_db.latitud = avistamiento_actualizado.latitud
-    avistamiento_db.longitud = avistamiento_actualizado.longitud
-    avistamiento_db.foto_url = avistamiento_actualizado.foto_url
-
-    # 3. Guardamos los cambios en PostgreSQL
-    db.commit()
-    db.refresh(avistamiento_db)
-    return avistamiento_db
-
-@app.delete("/avistamientos/{id_avistamiento}")
-def eliminar_avistamiento(id_avistamiento: str, db: Session = Depends(get_db)):
-    # 1. Buscamos el reporte
-    avistamiento_db = db.query(models.Avistamiento).filter(models.Avistamiento.id_avistamiento == id_avistamiento).first()
+    if not usuario_db or not security.verificar_password(form_data.password, usuario_db.password):
+        raise HTTPException(
+            status_code=401,
+            detail="Correo o contraseña incorrectos",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
     
-    if not avistamiento_db:
-        raise HTTPException(status_code=404, detail="El avistamiento no existe.")
-
-    # 2. Lo eliminamos de PostgreSQL
-    db.delete(avistamiento_db)
-    db.commit()
-    
-    # Devolvemos un mensaje de éxito limpio
-    return {"mensaje": "El avistamiento fue eliminado exitosamente del mapa"}
-
+    access_token = security.crear_token_acceso(data={"sub": usuario_db.email})
+    return {"access_token": access_token, "token_type": "bearer"}
 
 # ==========================================
 # ENDPOINTS DE AVISTAMIENTOS
 # ==========================================
-
 @app.get("/avistamientos/", response_model=List[schemas.AvistamientoResponse])
 def obtener_avistamientos(db: Session = Depends(get_db)):
     return db.query(models.Avistamiento).all()
 
 @app.post("/avistamientos/", response_model=schemas.AvistamientoResponse)
-def crear_avistamiento(avistamiento: schemas.AvistamientoCreate, db: Session = Depends(get_db)):
-    # Verificar que el usuario que reporta realmente exista
+def crear_avistamiento(
+    avistamiento: schemas.AvistamientoCreate, 
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2_scheme) # 🔐 Candado para crear
+):
     existe_usuario = db.query(models.Usuario).filter(models.Usuario.id_usuario == avistamiento.id_usuario).first()
     if not existe_usuario:
         raise HTTPException(status_code=404, detail="El usuario especificado no existe")
 
-    # Crear la instancia incorporando tu campo personalizado de color
     nuevo_avistamiento = models.Avistamiento(
         id_usuario=avistamiento.id_usuario,
         especie=avistamiento.especie,
-        color=avistamiento.color, # <--- Tu campo personalizado guardándose en la base de datos
+        color=avistamiento.color,
         descripcion=avistamiento.descripcion,
         latitud=avistamiento.latitud,
         longitud=avistamiento.longitud,
@@ -117,3 +118,42 @@ def crear_avistamiento(avistamiento: schemas.AvistamientoCreate, db: Session = D
     db.commit()
     db.refresh(nuevo_avistamiento)
     return nuevo_avistamiento
+
+@app.put("/avistamientos/{id_avistamiento}", response_model=schemas.AvistamientoResponse)
+def actualizar_avistamiento(
+    id_avistamiento: str, 
+    avistamiento_actualizado: schemas.AvistamientoCreate, 
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2_scheme) # 🔐 Candado para actualizar
+):
+    avistamiento_db = db.query(models.Avistamiento).filter(models.Avistamiento.id_avistamiento == id_avistamiento).first()
+    
+    if not avistamiento_db:
+        raise HTTPException(status_code=404, detail="El avistamiento no existe.")
+
+    avistamiento_db.especie = avistamiento_actualizado.especie
+    avistamiento_db.color = avistamiento_actualizado.color
+    avistamiento_db.descripcion = avistamiento_actualizado.descripcion
+    avistamiento_db.latitud = avistamiento_actualizado.latitud
+    avistamiento_db.longitud = avistamiento_actualizado.longitud
+    avistamiento_db.foto_url = avistamiento_actualizado.foto_url
+
+    db.commit()
+    db.refresh(avistamiento_db)
+    return avistamiento_db
+
+@app.delete("/avistamientos/{id_avistamiento}")
+def eliminar_avistamiento(
+    id_avistamiento: str, 
+    db: Session = Depends(get_db),
+    token: str = Depends(oauth2_scheme) # 🔐 Candado para borrar
+):
+    avistamiento_db = db.query(models.Avistamiento).filter(models.Avistamiento.id_avistamiento == id_avistamiento).first()
+    
+    if not avistamiento_db:
+        raise HTTPException(status_code=404, detail="El avistamiento no existe.")
+
+    db.delete(avistamiento_db)
+    db.commit()
+    
+    return {"mensaje": "El avistamiento fue eliminado exitosamente del mapa"}

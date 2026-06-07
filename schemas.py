@@ -10,7 +10,8 @@ from uuid import UUID
 # Lo que la app móvil envía para registrar a alguien
 class UsuarioCreate(BaseModel):
     username: str = Field(..., min_length=3, max_length=50)
-    email: str 
+    email: str
+    password: str
 
 # Lo que el servidor devuelve cuando consultas tu perfil
 class UsuarioResponse(BaseModel):
