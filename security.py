@@ -1,20 +1,19 @@
 from datetime import datetime, timedelta
 from typing import Optional
 from jose import jwt
-import bcrypt  # <- Importamos bcrypt directo
+import bcrypt
 
 # CONFIGURACIÓN DEL TOKEN
 SECRET_KEY = "tu_clave_secreta_super_segura_para_el_proyecto_pawtrack"
 ALGORITHM = "HS256"
 ACCESS_TOKEN_EXPIRE_MINUTES = 60
 
-# 1. Función para encriptar la contraseña (Sin passlib)
+# 1. Función para encriptar la contraseña
 def obtener_password_hasheado(password: str) -> str:
-    # bcrypt exige que el texto se convierta a bytes primero
     pwd_bytes = password.encode('utf-8')
     salt = bcrypt.gensalt()
     hashed_password = bcrypt.hashpw(pwd_bytes, salt)
-    return hashed_password.decode('utf-8') # Lo volvemos texto para guardarlo en PostgreSQL
+    return hashed_password.decode('utf-8')
 
 # 2. Función para verificar si la contraseña coincide
 def verificar_password(password_plano: str, password_hasheado: str) -> bool:
