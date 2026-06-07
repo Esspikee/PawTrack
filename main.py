@@ -46,6 +46,45 @@ def crear_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db))
     db.commit()           # Guardar en la base de datos real
     db.refresh(nuevo_usuario) # Traer el ID y fecha generados por Postgres
     return nuevo_usuario
+# ==========================================
+# ACTUALIZAR Y ELIMINAR AVISTAMIENTOS (PUT / DELETE)
+# ==========================================
+
+@app.put("/avistamientos/{id_avistamiento}", response_model=schemas.AvistamientoResponse)
+def actualizar_avistamiento(id_avistamiento: str, avistamiento_actualizado: schemas.AvistamientoCreate, db: Session = Depends(get_db)):
+    # 1. Buscamos si el avistamiento existe en la base de datos
+    avistamiento_db = db.query(models.Avistamiento).filter(models.Avistamiento.id_avistamiento == id_avistamiento).first()
+    
+    if not avistamiento_db:
+        raise HTTPException(status_code=404, detail="El avistamiento no existe.")
+
+    # 2. Reemplazamos los datos viejos con los nuevos
+    avistamiento_db.especie = avistamiento_actualizado.especie
+    avistamiento_db.color = avistamiento_actualizado.color
+    avistamiento_db.descripcion = avistamiento_actualizado.descripcion
+    avistamiento_db.latitud = avistamiento_actualizado.latitud
+    avistamiento_db.longitud = avistamiento_actualizado.longitud
+    avistamiento_db.foto_url = avistamiento_actualizado.foto_url
+
+    # 3. Guardamos los cambios en PostgreSQL
+    db.commit()
+    db.refresh(avistamiento_db)
+    return avistamiento_db
+
+@app.delete("/avistamientos/{id_avistamiento}")
+def eliminar_avistamiento(id_avistamiento: str, db: Session = Depends(get_db)):
+    # 1. Buscamos el reporte
+    avistamiento_db = db.query(models.Avistamiento).filter(models.Avistamiento.id_avistamiento == id_avistamiento).first()
+    
+    if not avistamiento_db:
+        raise HTTPException(status_code=404, detail="El avistamiento no existe.")
+
+    # 2. Lo eliminamos de PostgreSQL
+    db.delete(avistamiento_db)
+    db.commit()
+    
+    # Devolvemos un mensaje de éxito limpio
+    return {"mensaje": "El avistamiento fue eliminado exitosamente del mapa"}
 
 
 # ==========================================
