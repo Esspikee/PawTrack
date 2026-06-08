@@ -2,3 +2,6 @@
 __pycache__/
 *.pyc
 .env
+
+# Imágenes subidas localmente (contenido de usuario, no se versiona)
+uploads/

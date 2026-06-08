@@ -1,39 +1,29 @@
--- 1. Habilitar la generación automática de UUIDs
+-- ============================================================================
+-- PawTrack — Bootstrap de base de datos
+-- ============================================================================
+-- IMPORTANTE: el ESQUEMA (tablas usuarios, animales, avistamientos,
+-- confirmaciones, niveles) lo gestiona SQLAlchemy mediante
+-- `models.Base.metadata.create_all()` al arrancar la app. NO se definen
+-- tablas aquí para evitar que este archivo quede desfasado respecto a los
+-- modelos (como ocurrió con la versión anterior, previa a la Fase 4).
+--
+-- La app también siembra los niveles automáticamente al iniciar
+-- (ver seed_niveles() en main.py). Este archivo es un respaldo idempotente
+-- y opcional para sembrar manualmente sobre una BD ya creada.
+--
+-- Uso (opcional): psql -d pawtrack_db -f init_db.sql
+-- ============================================================================
+
+-- 1. Extensión para generación de UUIDs (por si se usa a nivel de BD).
 CREATE EXTENSION IF NOT EXISTS "uuid-ossp";
 
--- 2. Crear la tabla de Niveles
-CREATE TABLE niveles (
-    nivel INTEGER PRIMARY KEY,
-    titulo VARCHAR(50) NOT NULL,
-    puntos_requeridos INTEGER NOT NULL
-);
-
--- 3. Crear la tabla de Usuarios
-CREATE TABLE usuarios (
-    id_usuario UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    username VARCHAR(50) UNIQUE NOT NULL,
-    email VARCHAR(100) UNIQUE NOT NULL,
-    puntos_totales INTEGER DEFAULT 0,
-    nivel_actual INTEGER DEFAULT 1 REFERENCES niveles(nivel),
-    fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 4. Crear la tabla de Avistamientos
-CREATE TABLE avistamientos (
-    id_avistamiento UUID PRIMARY KEY DEFAULT uuid_generate_v4(),
-    id_usuario UUID REFERENCES usuarios(id_usuario) ON DELETE CASCADE,
-    especie VARCHAR(10) CHECK (especie IN ('Gato', 'Perro')),
-    descripcion TEXT,
-    latitud DECIMAL(9,6) NOT NULL,
-    longitud DECIMAL(9,6) NOT NULL,
-    foto_url VARCHAR(255),
-    fecha_registro TIMESTAMP DEFAULT CURRENT_TIMESTAMP
-);
-
--- 5. Insertar los niveles base para que el juego funcione desde el día 1
-INSERT INTO niveles (nivel, titulo, puntos_requeridos) VALUES 
-(1, 'Cachorro', 0),
-(2, 'Rastreador', 25),
-(3, 'Ojeador', 50),
-(4, 'Veterano', 100),
-(5, 'Maestro', 200);
+-- 2. Sembrar los niveles base de forma idempotente.
+--    Estos valores son la fuente de verdad de la curva de gamificación y
+--    deben coincidir con NIVELES_SEED en main.py.
+INSERT INTO niveles (nivel, titulo, puntos_requeridos) VALUES
+    (1, 'Novato', 0),
+    (2, 'Explorador', 10),
+    (3, 'Veterano', 50),
+    (4, 'Héroe', 150),
+    (5, 'Leyenda', 500)
+ON CONFLICT (nivel) DO NOTHING;

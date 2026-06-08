@@ -6,3 +6,5 @@ python-jose
 bcrypt
 python-dotenv
 slowapi
+python-multipart
+email-validator

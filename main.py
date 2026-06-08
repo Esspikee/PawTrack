@@ -1,5 +1,6 @@
-from fastapi import FastAPI, Depends, HTTPException, Request, status
+from fastapi import FastAPI, Depends, HTTPException, Request, status, UploadFile, File
 from fastapi.responses import JSONResponse
+from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
 from slowapi import Limiter
@@ -10,7 +11,10 @@ from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from jose import JWTError, jwt
 from typing import List
-from datetime import datetime, timezone, timedelta
+from datetime import datetime, timezone
+from pathlib import Path
+from uuid import uuid4
+from contextlib import asynccontextmanager
 
 # Importaciones locales
 from database import engine, SessionLocal
@@ -18,23 +22,70 @@ import models, schemas, security, config, logging_config
 
 logger = logging_config.get_logger(__name__)
 
-# 1. Le decimos a SQLAlchemy que construya las tablas si no existen
-models.Base.metadata.create_all(bind=engine)
+# ==========================================
+# BOOTSTRAP: datos semilla de niveles (gamificación)
+# ==========================================
+# Fuente de verdad de la curva de niveles. Sin esto, una base de datos NUEVA
+# deja la tabla 'niveles' vacía y el PRIMER registro de usuario falla por la
+# llave foránea nivel_actual -> niveles.nivel. Por eso se siembra al arrancar.
+NIVELES_SEED = [
+    (1, "Novato", 0),
+    (2, "Explorador", 10),
+    (3, "Veterano", 50),
+    (4, "Héroe", 150),
+    (5, "Leyenda", 500),
+]
 
-# 2. Inicializamos la aplicación
-app = FastAPI(title="PawTrack API", description="API para el rastreo comunitario de mascotas")
 
-@app.on_event("startup")
-async def startup_event():
+def seed_niveles() -> None:
+    """Inserta los niveles base de forma idempotente (no duplica si ya existen)."""
+    db = SessionLocal()
+    try:
+        existentes = {n.nivel for n in db.query(models.Nivel).all()}
+        nuevos = [
+            models.Nivel(nivel=n, titulo=t, puntos_requeridos=p)
+            for (n, t, p) in NIVELES_SEED
+            if n not in existentes
+        ]
+        if nuevos:
+            db.add_all(nuevos)
+            db.commit()
+            logger.info("Niveles seed inserted | count=%d", len(nuevos))
+    except Exception:
+        db.rollback()
+        logger.exception("Failed to seed niveles", exc_info=True)
+        raise
+    finally:
+        db.close()
+
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # --- startup ---
+    # 1. Construir las tablas si no existen (gestionado por los modelos SQLAlchemy).
+    models.Base.metadata.create_all(bind=engine)
+    # 2. Sembrar los niveles base (idempotente).
+    seed_niveles()
     logger.info(
         "PawTrack backend started successfully | environment=%s | db_configured=%s | version=%s",
         config.ENVIRONMENT,
         bool(config.DATABASE_URL),
         config.APP_VERSION,
     )
+    yield
+    # --- shutdown --- (nada que limpiar por ahora)
 
-# Rate limiting (slowapi)
-limiter = Limiter(key_func=get_remote_address)
+
+# Inicializamos la aplicación con el ciclo de vida (lifespan) moderno.
+app = FastAPI(
+    title="PawTrack API",
+    description="API para el rastreo comunitario de mascotas",
+    lifespan=lifespan,
+)
+
+# Rate limiting (slowapi). Se puede desactivar con RATE_LIMIT_ENABLED=false
+# (útil en desarrollo local y en pruebas automatizadas).
+limiter = Limiter(key_func=get_remote_address, enabled=config.RATE_LIMIT_ENABLED)
 app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 app.add_exception_handler(RateLimitExceeded, lambda request, exc: JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"}))
@@ -43,7 +94,10 @@ app.add_exception_handler(RateLimitExceeded, lambda request, exc: JSONResponse(s
 app.add_middleware(
     CORSMiddleware,
     allow_origins=["*"], # En una Beta cerrada, permitimos conexión desde cualquier origen
-    allow_credentials=True,
+    # La autenticación es por header Authorization (Bearer JWT), no por cookies,
+    # así que NO necesitamos credenciales. Además, "*" + credentials es una
+    # combinación inválida según la especificación CORS.
+    allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
@@ -51,8 +105,40 @@ app.add_middleware(
 # 4. Configuramos el sistema de seguridad
 oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 
-# CONSTANTES DE NEGOCIO
-AVISTAMIENTO_COOLDOWN_MINUTES = 5
+# ==========================================
+# CONFIGURACIÓN DE CARGA DE IMÁGENES (LOCAL, MVP)
+# ==========================================
+# Directorio anclado a la ubicación de este archivo (NO al CWD), de modo que
+# la ruta de escritura es siempre la misma sin importar desde dónde se lance.
+UPLOADS_DIR = Path(__file__).resolve().parent / "uploads"
+# Se crea automáticamente al iniciar la app (y antes de montar StaticFiles).
+UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
+
+# Límite de tamaño: 5 MB. No confiamos en Content-Length; contamos bytes reales.
+MAX_FILE_SIZE = 5 * 1024 * 1024
+UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1 MB por lectura (streaming a disco)
+
+# Tipos permitidos -> extensión canónica. La extensión NUNCA proviene del
+# nombre original enviado por el cliente, sino de este mapa controlado.
+ALLOWED_IMAGE_TYPES = {
+    "image/jpeg": "jpg",
+    "image/png": "png",
+    "image/webp": "webp",
+}
+
+# Firmas binarias ("magic bytes") para verificar que el contenido real coincide
+# con el Content-Type declarado (defensa en profundidad contra spoofing).
+def _content_matches_declared_type(content_type: str, header: bytes) -> bool:
+    if content_type == "image/jpeg":
+        return header[:3] == b"\xff\xd8\xff"
+    if content_type == "image/png":
+        return header[:8] == b"\x89PNG\r\n\x1a\n"
+    if content_type == "image/webp":
+        return header[:4] == b"RIFF" and header[8:12] == b"WEBP"
+    return False
+
+# 5. Servir archivos estáticos: las imágenes subidas quedan disponibles en /uploads/<archivo>
+app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
 # ==========================================
 # MANEJO DE ERRORES GLOBALES
@@ -147,26 +233,6 @@ def actualizar_nivel_usuario(usuario: models.Usuario, db: Session):
     if nivel_correspondiente and usuario.nivel_actual != nivel_correspondiente.nivel:
         usuario.nivel_actual = nivel_correspondiente.nivel
 
-def verificar_cooldown(id_usuario: str, db: Session):
-    """Verifica si han pasado 5 minutos desde el último avistamiento del usuario para evitar farmeo"""
-    ultimo_avistamiento = db.query(models.Avistamiento)\
-        .filter(models.Avistamiento.id_usuario == id_usuario)\
-        .order_by(models.Avistamiento.fecha_creacion.desc())\
-        .first()
-        
-    if ultimo_avistamiento and ultimo_avistamiento.fecha_creacion:
-        ahora = datetime.now(timezone.utc)
-        fecha_ultimo = ultimo_avistamiento.fecha_creacion
-        if fecha_ultimo.tzinfo is None:
-            fecha_ultimo = fecha_ultimo.replace(tzinfo=timezone.utc)
-            
-        tiempo_transcurrido = ahora - fecha_ultimo
-        if tiempo_transcurrido < timedelta(minutes=AVISTAMIENTO_COOLDOWN_MINUTES):
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST, 
-                detail="Debes esperar antes de registrar otro animal o avistamiento."
-            )
-
 # ==========================================
 # ENDPOINT DE INICIO
 # ==========================================
@@ -193,6 +259,13 @@ def obtener_usuarios(db: Session = Depends(get_db)):
 @limiter.limit("3/minute")
 def crear_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db), request: Request = None):
     """Crear nuevo usuario. Retorna datos completos incluyendo email al usuario que se registró."""
+    # Pre-chequeo de duplicados para devolver un mensaje claro al frontend.
+    # (La UniqueConstraint de la BD sigue siendo la garantía final ante una carrera.)
+    if db.query(models.Usuario).filter(models.Usuario.email == usuario.email).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El correo ya está registrado.")
+    if db.query(models.Usuario).filter(models.Usuario.username == usuario.username).first():
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="El nombre de usuario ya está en uso.")
+
     hashed_pwd = security.obtener_password_hasheado(usuario.password)
     nuevo_usuario = models.Usuario(
         username=usuario.username, 
@@ -235,6 +308,114 @@ def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depend
     return {"access_token": access_token, "token_type": "bearer"}
 
 # ==========================================
+# ENDPOINT DE CARGA DE IMÁGENES (LOCAL, MVP)
+# ==========================================
+@app.post("/upload", response_model=schemas.UploadResponse)
+@limiter.limit("20/minute")
+async def subir_imagen(
+    request: Request,
+    file: UploadFile = File(...),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """
+    Recibe UNA imagen vía multipart/form-data, la valida y la guarda localmente
+    en uploads/ con un nombre UUID. Devuelve la URL pública servida por StaticFiles.
+
+    El frontend luego envía esa 'url' como foto_principal / foto_url al crear
+    animales o avistamientos. Este endpoint NO toca la base de datos.
+    """
+    # 1. Validar el tipo MIME declarado (rechaza todo lo que no sea jpg/png/webp).
+    content_type = (file.content_type or "").lower()
+    if content_type not in ALLOWED_IMAGE_TYPES:
+        logger.warning(
+            "Image upload rejected (unsupported type) | user_id=%s | content_type=%s",
+            current_user.id_usuario,
+            content_type or "none",
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Unsupported file type",
+        )
+
+    extension = ALLOWED_IMAGE_TYPES[content_type]
+    stored_filename = f"{uuid4().hex}.{extension}"
+    destino = UPLOADS_DIR / stored_filename
+
+    # Cinturón y tirantes: garantizamos que el destino quede DENTRO de uploads/.
+    # Como el nombre es un UUID generado por nosotros esto nunca debería fallar,
+    # pero protege ante cualquier regresión futura (path traversal).
+    if UPLOADS_DIR.resolve() not in destino.resolve().parents:
+        logger.error(
+            "Image upload aborted (path escape detected) | user_id=%s | target=%s",
+            current_user.id_usuario,
+            destino,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Invalid storage path",
+        )
+
+    # 2. Leer el primer bloque y verificar las firmas binarias ANTES de escribir.
+    first_chunk = await file.read(UPLOAD_CHUNK_SIZE)
+    if not _content_matches_declared_type(content_type, first_chunk[:16]):
+        logger.warning(
+            "Image upload rejected (content/type mismatch) | user_id=%s | content_type=%s",
+            current_user.id_usuario,
+            content_type,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="File content does not match its declared type",
+        )
+
+    # 3. Volcar a disco por streaming, contando bytes reales para imponer el límite.
+    total_bytes = 0
+    try:
+        with destino.open("wb") as buffer:
+            chunk = first_chunk
+            while chunk:
+                total_bytes += len(chunk)
+                if total_bytes > MAX_FILE_SIZE:
+                    buffer.close()
+                    destino.unlink(missing_ok=True)
+                    logger.warning(
+                        "Image upload rejected (too large) | user_id=%s | bytes_so_far=%s",
+                        current_user.id_usuario,
+                        total_bytes,
+                    )
+                    raise HTTPException(
+                        status_code=status.HTTP_400_BAD_REQUEST,
+                        detail="File exceeds maximum size of 5 MB",
+                    )
+                buffer.write(chunk)
+                chunk = await file.read(UPLOAD_CHUNK_SIZE)
+    except HTTPException:
+        raise
+    except Exception:
+        # Fallo de almacenamiento: limpiamos cualquier archivo parcial y reportamos.
+        destino.unlink(missing_ok=True)
+        logger.exception(
+            "Image upload failed (storage error) | user_id=%s",
+            current_user.id_usuario,
+            exc_info=True,
+        )
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Could not store the uploaded file",
+        )
+    finally:
+        await file.close()
+
+    # 4. Éxito. NUNCA registramos contenido ni binario, solo metadatos.
+    logger.info(
+        "Image uploaded | user_id=%s | stored_filename=%s | bytes=%s",
+        current_user.id_usuario,
+        stored_filename,
+        total_bytes,
+    )
+    return {"filename": stored_filename, "url": f"/uploads/{stored_filename}"}
+
+# ==========================================
 # ENDPOINTS DE ANIMALES (INDIVIDUO Y CICLO DE VIDA)
 # ==========================================
 @app.get("/animales/", response_model=List[schemas.AnimalResponse])
@@ -254,12 +435,9 @@ def registrar_nuevo_animal(
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user)
 ):
-    # 1. Verificar antifraude
-    verificar_cooldown(current_user.id_usuario, db)
-        
     ahora = datetime.now(timezone.utc)
 
-    # 2. Crear Animal
+    # 1. Crear Animal
     nuevo_animal = models.Animal(
         id_descubridor=current_user.id_usuario,
         especie=datos.especie,
@@ -272,9 +450,9 @@ def registrar_nuevo_animal(
         ultima_longitud=datos.longitud
     )
     db.add(nuevo_animal)
-    db.flush() 
+    db.flush()
 
-    # 3. Crear Primer Avistamiento
+    # 2. Crear Primer Avistamiento
     nuevo_avistamiento = models.Avistamiento(
         id_animal=nuevo_animal.id_animal,
         id_usuario=current_user.id_usuario,
@@ -286,7 +464,7 @@ def registrar_nuevo_animal(
     )
     db.add(nuevo_avistamiento)
 
-    # 4. Otorgar XP
+    # 3. Otorgar XP
     current_user.puntos_totales += 5
     actualizar_nivel_usuario(current_user, db)
 
@@ -337,11 +515,9 @@ def agregar_avistamiento(
     if not animal_db:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El animal no existe.")
 
-    # 2. Verificar antifraude
-    verificar_cooldown(current_user.id_usuario, db)
     ahora = datetime.now(timezone.utc)
 
-    # 3. Crear el nuevo registro del evento
+    # 2. Crear el nuevo registro del evento
     nuevo_avistamiento = models.Avistamiento(
         id_animal=animal_db.id_animal,
         id_usuario=current_user.id_usuario,
@@ -353,17 +529,17 @@ def agregar_avistamiento(
     )
     db.add(nuevo_avistamiento)
 
-    # 4. Actualizar los datos desnormalizados del animal para el mapa
+    # 3. Actualizar los datos desnormalizados del animal para el mapa
     animal_db.fecha_ultimo_avistamiento = ahora
     animal_db.ultima_latitud = datos.latitud
     animal_db.ultima_longitud = datos.longitud
     animal_db.total_avistamientos += 1
 
-    # 5. Otorgar XP al usuario por contribuir al seguimiento
+    # 4. Otorgar XP al usuario por contribuir al seguimiento
     current_user.puntos_totales += 5
     actualizar_nivel_usuario(current_user, db)
 
-    # 6. Guardar transacción completa
+    # 5. Guardar transacción completa
     commit_db(db)
     db.refresh(nuevo_avistamiento)
 
@@ -386,8 +562,89 @@ def obtener_historial_animal(id_animal: str, db: Session = Depends(get_db)):
         .filter(models.Avistamiento.id_animal == id_animal)\
         .order_by(models.Avistamiento.fecha_creacion.desc())\
         .all()
-        
+
     return historial
+
+@app.delete("/avistamientos/{id_avistamiento}")
+def eliminar_avistamiento(
+    id_avistamiento: str,
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user)
+):
+    """
+    Elimina un avistamiento que el propio usuario registró (corregir un error).
+
+    Transacción atómica que mantiene la integridad de TODO el grafo:
+      - Solo el autor del avistamiento puede borrarlo.
+      - No se permite borrar el ÚNICO avistamiento de un animal (dejaría al
+        animal huérfano y con ubicación obsoleta); en ese caso se responde 400.
+      - Revierte el XP otorgado en su día: -5 al autor y -1 a cada usuario cuya
+        confirmación se borra en cascada (consistente con DELETE /confirmar).
+      - Recalcula los campos desnormalizados del animal (total y última
+        ubicación/fecha) a partir de los avistamientos restantes.
+    """
+    avistamiento = db.query(models.Avistamiento)\
+        .filter(models.Avistamiento.id_avistamiento == id_avistamiento).first()
+    if not avistamiento:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Avistamiento no encontrado.")
+
+    # 1. Autorización: solo el autor puede borrar su avistamiento.
+    if str(avistamiento.id_usuario) != str(current_user.id_usuario):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="No tienes permisos para eliminar este avistamiento."
+        )
+
+    id_animal = avistamiento.id_animal
+
+    # 2. No permitir borrar el último avistamiento de un animal (lo dejaría huérfano).
+    total_avistamientos = db.query(models.Avistamiento)\
+        .filter(models.Avistamiento.id_animal == id_animal).count()
+    if total_avistamientos <= 1:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="No puedes eliminar el único avistamiento de un animal."
+        )
+
+    # 3. Revertir el XP de cada confirmación que se borrará en cascada.
+    confirmaciones = db.query(models.Confirmacion)\
+        .filter(models.Confirmacion.id_avistamiento == id_avistamiento).all()
+    for confirmacion in confirmaciones:
+        confirmador = confirmacion.usuario
+        if confirmador:
+            confirmador.puntos_totales = max(0, confirmador.puntos_totales - 1)
+            actualizar_nivel_usuario(confirmador, db)
+
+    # 4. Revertir el XP que se otorgó al autor por crear este avistamiento.
+    current_user.puntos_totales = max(0, current_user.puntos_totales - 5)
+    actualizar_nivel_usuario(current_user, db)
+
+    # 5. Borrar el avistamiento (sus confirmaciones caen por cascade) y persistir.
+    db.delete(avistamiento)
+    db.flush()
+
+    # 6. Recalcular los datos desnormalizados del animal con lo que queda.
+    restantes = db.query(models.Avistamiento)\
+        .filter(models.Avistamiento.id_animal == id_animal)\
+        .order_by(models.Avistamiento.fecha_creacion.desc())\
+        .all()
+    animal_db = db.query(models.Animal).filter(models.Animal.id_animal == id_animal).first()
+    if animal_db and restantes:
+        mas_reciente = restantes[0]
+        animal_db.total_avistamientos = len(restantes)
+        animal_db.fecha_ultimo_avistamiento = mas_reciente.fecha_creacion
+        animal_db.ultima_latitud = mas_reciente.latitud
+        animal_db.ultima_longitud = mas_reciente.longitud
+
+    commit_db(db)
+
+    logger.info(
+        "Sighting deleted | user_id=%s | sighting_id=%s | animal_id=%s",
+        current_user.id_usuario,
+        id_avistamiento,
+        id_animal,
+    )
+    return {"mensaje": "Avistamiento eliminado exitosamente."}
 
 # ==========================================
 # ENDPOINTS DE CONFIRMACIONES

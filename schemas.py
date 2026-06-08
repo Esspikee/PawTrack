@@ -1,4 +1,4 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, EmailStr, field_validator
 from typing import Optional, List
 from datetime import datetime
 from models import EspeciePermitida
@@ -36,8 +36,21 @@ class UsuarioPublico(BaseModel):
         from_attributes = True
 
 class UsuarioCreate(UsuarioBase):
-    # 🛡️ Protección contra el bug de Bcrypt (Límite de 72 bytes)
-    password: str = Field(..., max_length=70)
+    # Validación de formato de email SOLO en la entrada (creación). Los modelos
+    # de respuesta mantienen 'email: str' para no romper la serialización de
+    # filas antiguas que pudieran tener un email no conforme (evita 500).
+    email: EmailStr
+    password: str = Field(..., min_length=1)
+
+    @field_validator("password")
+    @classmethod
+    def password_dentro_del_limite_bcrypt(cls, v: str) -> str:
+        # bcrypt (5.x) LANZA ValueError si la contraseña supera 72 BYTES.
+        # max_length contaba caracteres, no bytes: una contraseña multibyte
+        # (acentos/emojis) podía pasar el schema y reventar en el hasheo (500).
+        if len(v.encode("utf-8")) > 72:
+            raise ValueError("La contraseña no puede exceder 72 bytes.")
+        return v
 
 class UsuarioResponse(UsuarioBase):
     id_usuario: uuid.UUID
@@ -126,6 +139,15 @@ class AnimalDetalleResponse(AnimalResponse):
 
     class Config:
         from_attributes = True
+
+# ==========================================
+# ESQUEMAS DE CARGA DE IMÁGENES (UPLOAD)
+# ==========================================
+class UploadResponse(BaseModel):
+    """Respuesta del endpoint POST /upload. El frontend toma 'url' y la envía
+    como foto_principal / foto_url al crear animales o avistamientos."""
+    filename: str
+    url: str
 
 # ==========================================
 # ESQUEMAS DE AUTENTICACIÓN

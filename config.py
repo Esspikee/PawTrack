@@ -45,5 +45,9 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 DEBUG = ENVIRONMENT == "development"
 
+# Rate limiting. Enabled by default; set RATE_LIMIT_ENABLED=false to turn it off
+# (useful for local development and automated tests).
+RATE_LIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "true").strip().lower() not in ("false", "0", "no")
+
 # Optional version metadata for startup logging
 APP_VERSION = os.getenv("APP_VERSION", "unknown")
