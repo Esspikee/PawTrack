@@ -1,0 +1,1307 @@
+{
+  "openapi": "3.1.0",
+  "info": {
+    "title": "PawTrack API",
+    "description": "API para el rastreo comunitario de mascotas",
+    "version": "0.1.0"
+  },
+  "paths": {
+    "/": {
+      "get": {
+        "summary": "Inicio",
+        "operationId": "inicio__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
+    "/usuarios/me": {
+      "get": {
+        "summary": "Obtener Perfil Usuario",
+        "description": "Obtiene el perfil completo del usuario autenticado.",
+        "operationId": "obtener_perfil_usuario_usuarios_me_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/usuarios/": {
+      "get": {
+        "summary": "Obtener Usuarios",
+        "operationId": "obtener_usuarios_usuarios__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/UsuarioPublico"
+                  },
+                  "type": "array",
+                  "title": "Response Obtener Usuarios Usuarios  Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Crear Usuario",
+        "description": "Crear nuevo usuario. Retorna datos completos incluyendo email al usuario que se registró.",
+        "operationId": "crear_usuario_usuarios__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UsuarioCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UsuarioResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/login": {
+      "post": {
+        "summary": "Login",
+        "operationId": "login_login_post",
+        "requestBody": {
+          "content": {
+            "application/x-www-form-urlencoded": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_login_login_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/Token"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/upload": {
+      "post": {
+        "summary": "Subir Imagen",
+        "description": "Recibe UNA imagen vía multipart/form-data, la valida y la guarda localmente\nen uploads/ con un nombre UUID. Devuelve la URL pública servida por StaticFiles.\n\nEl frontend luego envía esa 'url' como foto_principal / foto_url al crear\nanimales o avistamientos. Este endpoint NO toca la base de datos.",
+        "operationId": "subir_imagen_upload_post",
+        "requestBody": {
+          "content": {
+            "multipart/form-data": {
+              "schema": {
+                "$ref": "#/components/schemas/Body_subir_imagen_upload_post"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/UploadResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/animales/": {
+      "get": {
+        "summary": "Obtener Animales",
+        "operationId": "obtener_animales_animales__get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AnimalResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Obtener Animales Animales  Get"
+                }
+              }
+            }
+          }
+        }
+      },
+      "post": {
+        "summary": "Registrar Nuevo Animal",
+        "operationId": "registrar_nuevo_animal_animales__post",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnimalCreate"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnimalDetalleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
+    "/animales/{id_animal}": {
+      "get": {
+        "summary": "Obtener Animal Detalle",
+        "operationId": "obtener_animal_detalle_animales__id_animal__get",
+        "parameters": [
+          {
+            "name": "id_animal",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Animal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnimalDetalleResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "summary": "Actualizar Animal",
+        "operationId": "actualizar_animal_animales__id_animal__put",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id_animal",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Animal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AnimalUpdate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AnimalResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/animales/{id_animal}/avistamientos": {
+      "post": {
+        "summary": "Agregar Avistamiento",
+        "description": "Registra una nueva ubicación o foto para un animal que ya existe en el mapa.",
+        "operationId": "agregar_avistamiento_animales__id_animal__avistamientos_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id_animal",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Animal"
+            }
+          }
+        ],
+        "requestBody": {
+          "required": true,
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/AvistamientoCreate"
+              }
+            }
+          }
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/AvistamientoResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/animales/{id_animal}/historial": {
+      "get": {
+        "summary": "Obtener Historial Animal",
+        "description": "Obtiene toda la ruta y el historial cronológico de un animal.",
+        "operationId": "obtener_historial_animal_animales__id_animal__historial_get",
+        "parameters": [
+          {
+            "name": "id_animal",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Animal"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/AvistamientoResponse"
+                  },
+                  "title": "Response Obtener Historial Animal Animales  Id Animal  Historial Get"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/avistamientos/{id_avistamiento}": {
+      "delete": {
+        "summary": "Eliminar Avistamiento",
+        "description": "Elimina un avistamiento que el propio usuario registró (corregir un error).\n\nTransacción atómica que mantiene la integridad de TODO el grafo:\n  - Solo el autor del avistamiento puede borrarlo.\n  - No se permite borrar el ÚNICO avistamiento de un animal (dejaría al\n    animal huérfano y con ubicación obsoleta); en ese caso se responde 400.\n  - Revierte el XP otorgado en su día: -5 al autor y -1 a cada usuario cuya\n    confirmación se borra en cascada (consistente con DELETE /confirmar).\n  - Recalcula los campos desnormalizados del animal (total y última\n    ubicación/fecha) a partir de los avistamientos restantes.",
+        "operationId": "eliminar_avistamiento_avistamientos__id_avistamiento__delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id_avistamiento",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Avistamiento"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/avistamientos/{id_avistamiento}/confirmar": {
+      "post": {
+        "summary": "Confirmar Avistamiento",
+        "operationId": "confirmar_avistamiento_avistamientos__id_avistamiento__confirmar_post",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id_avistamiento",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Avistamiento"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ConfirmacionResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      },
+      "delete": {
+        "summary": "Eliminar Confirmacion",
+        "operationId": "eliminar_confirmacion_avistamientos__id_avistamiento__confirmar_delete",
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ],
+        "parameters": [
+          {
+            "name": "id_avistamiento",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Avistamiento"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
+    "/avistamientos/{id_avistamiento}/confirmaciones": {
+      "get": {
+        "summary": "Obtener Confirmaciones",
+        "operationId": "obtener_confirmaciones_avistamientos__id_avistamiento__confirmaciones_get",
+        "parameters": [
+          {
+            "name": "id_avistamiento",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "title": "Id Avistamiento"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/ListaConfirmacionesResponse"
+                }
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "AnimalCreate": {
+        "properties": {
+          "especie": {
+            "$ref": "#/components/schemas/EspeciePermitida"
+          },
+          "color_principal": {
+            "type": "string",
+            "title": "Color Principal"
+          },
+          "foto_principal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foto Principal"
+          },
+          "latitud": {
+            "type": "number",
+            "title": "Latitud"
+          },
+          "longitud": {
+            "type": "number",
+            "title": "Longitud"
+          },
+          "descripcion": {
+            "type": "string",
+            "title": "Descripcion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "especie",
+          "color_principal",
+          "latitud",
+          "longitud",
+          "descripcion"
+        ],
+        "title": "AnimalCreate"
+      },
+      "AnimalDetalleResponse": {
+        "properties": {
+          "id_animal": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Animal"
+          },
+          "especie": {
+            "$ref": "#/components/schemas/EspeciePermitida"
+          },
+          "color_principal": {
+            "type": "string",
+            "title": "Color Principal"
+          },
+          "foto_principal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foto Principal"
+          },
+          "total_avistamientos": {
+            "type": "integer",
+            "title": "Total Avistamientos"
+          },
+          "ultima_latitud": {
+            "type": "number",
+            "title": "Ultima Latitud"
+          },
+          "ultima_longitud": {
+            "type": "number",
+            "title": "Ultima Longitud"
+          },
+          "fecha_ultimo_avistamiento": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fecha Ultimo Avistamiento"
+          },
+          "cantidad_confirmaciones": {
+            "type": "integer",
+            "title": "Cantidad Confirmaciones"
+          },
+          "id_descubridor": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Descubridor"
+          },
+          "fecha_primer_avistamiento": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fecha Primer Avistamiento"
+          },
+          "avistamientos": {
+            "items": {
+              "$ref": "#/components/schemas/AvistamientoResponse"
+            },
+            "type": "array",
+            "title": "Avistamientos",
+            "default": []
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_animal",
+          "especie",
+          "color_principal",
+          "total_avistamientos",
+          "ultima_latitud",
+          "ultima_longitud",
+          "fecha_ultimo_avistamiento",
+          "cantidad_confirmaciones",
+          "id_descubridor",
+          "fecha_primer_avistamiento"
+        ],
+        "title": "AnimalDetalleResponse"
+      },
+      "AnimalResponse": {
+        "properties": {
+          "id_animal": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Animal"
+          },
+          "especie": {
+            "$ref": "#/components/schemas/EspeciePermitida"
+          },
+          "color_principal": {
+            "type": "string",
+            "title": "Color Principal"
+          },
+          "foto_principal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foto Principal"
+          },
+          "total_avistamientos": {
+            "type": "integer",
+            "title": "Total Avistamientos"
+          },
+          "ultima_latitud": {
+            "type": "number",
+            "title": "Ultima Latitud"
+          },
+          "ultima_longitud": {
+            "type": "number",
+            "title": "Ultima Longitud"
+          },
+          "fecha_ultimo_avistamiento": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fecha Ultimo Avistamiento"
+          },
+          "cantidad_confirmaciones": {
+            "type": "integer",
+            "title": "Cantidad Confirmaciones"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_animal",
+          "especie",
+          "color_principal",
+          "total_avistamientos",
+          "ultima_latitud",
+          "ultima_longitud",
+          "fecha_ultimo_avistamiento",
+          "cantidad_confirmaciones"
+        ],
+        "title": "AnimalResponse"
+      },
+      "AnimalUpdate": {
+        "properties": {
+          "especie": {
+            "$ref": "#/components/schemas/EspeciePermitida"
+          },
+          "color_principal": {
+            "type": "string",
+            "title": "Color Principal"
+          },
+          "foto_principal": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foto Principal"
+          }
+        },
+        "type": "object",
+        "required": [
+          "especie",
+          "color_principal"
+        ],
+        "title": "AnimalUpdate"
+      },
+      "AvistamientoCreate": {
+        "properties": {
+          "latitud": {
+            "type": "number",
+            "title": "Latitud"
+          },
+          "longitud": {
+            "type": "number",
+            "title": "Longitud"
+          },
+          "descripcion": {
+            "type": "string",
+            "title": "Descripcion"
+          },
+          "foto_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foto Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "latitud",
+          "longitud",
+          "descripcion"
+        ],
+        "title": "AvistamientoCreate"
+      },
+      "AvistamientoResponse": {
+        "properties": {
+          "latitud": {
+            "type": "number",
+            "title": "Latitud"
+          },
+          "longitud": {
+            "type": "number",
+            "title": "Longitud"
+          },
+          "descripcion": {
+            "type": "string",
+            "title": "Descripcion"
+          },
+          "foto_url": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Foto Url"
+          },
+          "id_avistamiento": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Avistamiento"
+          },
+          "id_animal": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Animal"
+          },
+          "id_usuario": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Usuario"
+          },
+          "fecha_creacion": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fecha Creacion"
+          },
+          "cantidad_confirmaciones": {
+            "type": "integer",
+            "title": "Cantidad Confirmaciones"
+          }
+        },
+        "type": "object",
+        "required": [
+          "latitud",
+          "longitud",
+          "descripcion",
+          "id_avistamiento",
+          "id_animal",
+          "id_usuario",
+          "fecha_creacion",
+          "cantidad_confirmaciones"
+        ],
+        "title": "AvistamientoResponse"
+      },
+      "Body_login_login_post": {
+        "properties": {
+          "grant_type": {
+            "anyOf": [
+              {
+                "type": "string",
+                "pattern": "^password$"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Grant Type"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "password": {
+            "type": "string",
+            "format": "password",
+            "title": "Password"
+          },
+          "scope": {
+            "type": "string",
+            "title": "Scope",
+            "default": ""
+          },
+          "client_id": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Client Id"
+          },
+          "client_secret": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "format": "password",
+            "title": "Client Secret"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "password"
+        ],
+        "title": "Body_login_login_post"
+      },
+      "Body_subir_imagen_upload_post": {
+        "properties": {
+          "file": {
+            "type": "string",
+            "contentMediaType": "application/octet-stream",
+            "title": "File"
+          }
+        },
+        "type": "object",
+        "required": [
+          "file"
+        ],
+        "title": "Body_subir_imagen_upload_post"
+      },
+      "ConfirmacionResponse": {
+        "properties": {
+          "id_confirmacion": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Confirmacion"
+          },
+          "id_usuario": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Usuario"
+          },
+          "id_avistamiento": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Avistamiento"
+          },
+          "fecha_confirmacion": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fecha Confirmacion"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_confirmacion",
+          "id_usuario",
+          "id_avistamiento",
+          "fecha_confirmacion"
+        ],
+        "title": "ConfirmacionResponse"
+      },
+      "EspeciePermitida": {
+        "type": "string",
+        "enum": [
+          "Gato",
+          "Perro"
+        ],
+        "title": "EspeciePermitida"
+      },
+      "HTTPValidationError": {
+        "properties": {
+          "detail": {
+            "items": {
+              "$ref": "#/components/schemas/ValidationError"
+            },
+            "type": "array",
+            "title": "Detail"
+          }
+        },
+        "type": "object",
+        "title": "HTTPValidationError"
+      },
+      "ListaConfirmacionesResponse": {
+        "properties": {
+          "cantidad_total": {
+            "type": "integer",
+            "title": "Cantidad Total"
+          },
+          "usuarios": {
+            "items": {
+              "$ref": "#/components/schemas/UsuarioBasico"
+            },
+            "type": "array",
+            "title": "Usuarios"
+          }
+        },
+        "type": "object",
+        "required": [
+          "cantidad_total",
+          "usuarios"
+        ],
+        "title": "ListaConfirmacionesResponse"
+      },
+      "Token": {
+        "properties": {
+          "access_token": {
+            "type": "string",
+            "title": "Access Token"
+          },
+          "token_type": {
+            "type": "string",
+            "title": "Token Type"
+          }
+        },
+        "type": "object",
+        "required": [
+          "access_token",
+          "token_type"
+        ],
+        "title": "Token"
+      },
+      "UploadResponse": {
+        "properties": {
+          "filename": {
+            "type": "string",
+            "title": "Filename"
+          },
+          "url": {
+            "type": "string",
+            "title": "Url"
+          }
+        },
+        "type": "object",
+        "required": [
+          "filename",
+          "url"
+        ],
+        "title": "UploadResponse",
+        "description": "Respuesta del endpoint POST /upload. El frontend toma 'url' y la envía\ncomo foto_principal / foto_url al crear animales o avistamientos."
+      },
+      "UsuarioBasico": {
+        "properties": {
+          "id_usuario": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Usuario"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_usuario",
+          "username"
+        ],
+        "title": "UsuarioBasico"
+      },
+      "UsuarioCreate": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "email": {
+            "type": "string",
+            "format": "email",
+            "title": "Email"
+          },
+          "password": {
+            "type": "string",
+            "minLength": 1,
+            "title": "Password"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "email",
+          "password"
+        ],
+        "title": "UsuarioCreate"
+      },
+      "UsuarioPublico": {
+        "properties": {
+          "id_usuario": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Usuario"
+          },
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "puntos_totales": {
+            "type": "integer",
+            "title": "Puntos Totales"
+          },
+          "nivel_actual": {
+            "type": "integer",
+            "title": "Nivel Actual"
+          },
+          "fecha_creacion": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fecha Creacion"
+          },
+          "animales_descubiertos": {
+            "type": "integer",
+            "title": "Animales Descubiertos"
+          },
+          "avistamientos_realizados": {
+            "type": "integer",
+            "title": "Avistamientos Realizados"
+          },
+          "confirmaciones_realizadas": {
+            "type": "integer",
+            "title": "Confirmaciones Realizadas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id_usuario",
+          "username",
+          "puntos_totales",
+          "nivel_actual",
+          "fecha_creacion",
+          "animales_descubiertos",
+          "avistamientos_realizados",
+          "confirmaciones_realizadas"
+        ],
+        "title": "UsuarioPublico",
+        "description": "Esquema seguro para listar usuarios públicamente (sin email)."
+      },
+      "UsuarioResponse": {
+        "properties": {
+          "username": {
+            "type": "string",
+            "title": "Username"
+          },
+          "email": {
+            "type": "string",
+            "title": "Email"
+          },
+          "id_usuario": {
+            "type": "string",
+            "format": "uuid",
+            "title": "Id Usuario"
+          },
+          "puntos_totales": {
+            "type": "integer",
+            "title": "Puntos Totales"
+          },
+          "nivel_actual": {
+            "type": "integer",
+            "title": "Nivel Actual"
+          },
+          "fecha_creacion": {
+            "type": "string",
+            "format": "date-time",
+            "title": "Fecha Creacion"
+          },
+          "animales_descubiertos": {
+            "type": "integer",
+            "title": "Animales Descubiertos"
+          },
+          "avistamientos_realizados": {
+            "type": "integer",
+            "title": "Avistamientos Realizados"
+          },
+          "confirmaciones_realizadas": {
+            "type": "integer",
+            "title": "Confirmaciones Realizadas"
+          }
+        },
+        "type": "object",
+        "required": [
+          "username",
+          "email",
+          "id_usuario",
+          "puntos_totales",
+          "nivel_actual",
+          "fecha_creacion",
+          "animales_descubiertos",
+          "avistamientos_realizados",
+          "confirmaciones_realizadas"
+        ],
+        "title": "UsuarioResponse"
+      },
+      "ValidationError": {
+        "properties": {
+          "loc": {
+            "items": {
+              "anyOf": [
+                {
+                  "type": "string"
+                },
+                {
+                  "type": "integer"
+                }
+              ]
+            },
+            "type": "array",
+            "title": "Location"
+          },
+          "msg": {
+            "type": "string",
+            "title": "Message"
+          },
+          "type": {
+            "type": "string",
+            "title": "Error Type"
+          },
+          "input": {
+            "title": "Input"
+          },
+          "ctx": {
+            "type": "object",
+            "title": "Context"
+          }
+        },
+        "type": "object",
+        "required": [
+          "loc",
+          "msg",
+          "type"
+        ],
+        "title": "ValidationError"
+      }
+    },
+    "securitySchemes": {
+      "OAuth2PasswordBearer": {
+        "type": "oauth2",
+        "flows": {
+          "password": {
+            "scopes": {},
+            "tokenUrl": "login"
+          }
+        }
+      }
+    }
+  }
+}
