@@ -9,6 +9,9 @@ from sqlalchemy.orm import DeclarativeMeta
 import database
 import models
 import sys
+import logging_config
+
+logger = logging_config.get_logger(__name__)
 
 engine = database.engine
 inspector = inspect(engine)
@@ -107,66 +110,66 @@ for tname, tinfo in expected_tables.items():
                 missing_fks.setdefault(tname, []).append(expected_trip)
 
 # Print report
-print('\n=== DB DIAGNOSTICS REPORT ===\n')
-print('DB URL:', database.SQLALCHEMY_DATABASE_URL)
-print('\n-- Tables --')
-print('Expected tables (from models):', sorted(expected_tables.keys()))
-print('Actual tables (in DB):', sorted(actual_tables.keys()))
+logger.info('=== DB DIAGNOSTICS REPORT ===')
+logger.info('Database connection configured and diagnostics started')
+logger.info('-- Tables --')
+logger.info('Expected tables (from models): %s', sorted(expected_tables.keys()))
+logger.info('Actual tables (in DB): %s', sorted(actual_tables.keys()))
 
-print('\n-- Missing tables (expected but not present) --')
+logger.info('-- Missing tables (expected but not present) --')
 for t in missing_tables:
-    print('-', t)
+    logger.info('- %s', t)
 
-print('\n-- Extra tables (present in DB but not in models) --')
+logger.info('-- Extra tables (present in DB but not in models) --')
 for t in extra_tables:
-    print('-', t)
+    logger.info('- %s', t)
 
-print('\n-- Missing columns --')
+logger.info('-- Missing columns --')
 for t, cols in missing_columns.items():
-    print('\nTABLE:', t)
+    logger.info('TABLE: %s', t)
     for name, meta in cols:
-        print('  -', name, 'EXPECTED TYPE:', meta['type'], 'NULLABLE:', meta['nullable'], 'DEFAULT:', meta['default'], 'FKS:', meta['fks'])
+        logger.info('  - %s EXPECTED TYPE: %s NULLABLE: %s DEFAULT: %s FKS: %s', name, meta['type'], meta['nullable'], meta['default'], meta['fks'])
 
-print('\n-- Extra columns --')
+logger.info('-- Extra columns --')
 for t, cols in extra_columns.items():
-    print('\nTABLE:', t)
+    logger.info('TABLE: %s', t)
     for name, meta in cols:
-        print('  -', name, 'ACTUAL TYPE:', meta.get('type'), 'NULLABLE:', meta.get('nullable'), 'DEFAULT:', meta.get('default'))
+        logger.info('  - %s ACTUAL TYPE: %s NULLABLE: %s DEFAULT: %s', name, meta.get('type'), meta.get('nullable'), meta.get('default'))
 
-print('\n-- Column type mismatches --')
+logger.info('-- Column type mismatches --')
 for t, mism in col_type_mismatches.items():
-    print('\nTABLE:', t)
+    logger.info('TABLE: %s', t)
     for name, etype, atype in mism:
-        print('  -', name, 'EXPECTED:', etype, 'ACTUAL:', atype)
+        logger.info('  - %s EXPECTED: %s ACTUAL: %s', name, etype, atype)
 
-print('\n-- Missing foreign keys --')
+logger.info('-- Missing foreign keys --')
 for t, fks in missing_fks.items():
-    print('\nTABLE:', t)
+    logger.info('TABLE: %s', t)
     for fk in fks:
-        print('  - Column', fk[0], 'expected FK ->', fk[1]+'.'+fk[2])
+        logger.info('  - Column %s expected FK -> %s.%s', fk[0], fk[1], fk[2])
 
 # Determine likely DB version age
 # Heuristic: if columns from newer models are missing, DB is older
 if missing_tables or missing_columns:
-    print('\n\nInference: The database schema is missing tables/columns present in models; likely the database is from an older version of the project or migrations were not applied.')
+    logger.info('Inference: The database schema is missing tables/columns present in models; likely the database is from an older version of the project or migrations were not applied.')
 else:
-    print('\n\nInference: Database appears in sync with models (no missing tables/columns detected).')
+    logger.info('Inference: Database appears in sync with models (no missing tables/columns detected).')
 
 # Detailed note for avistamientos.id_animal
-print('\n\n--- Focus: avistamientos.id_animal ---')
+logger.info('--- Focus: avistamientos.id_animal ---')
 if 'avistamientos' in expected_tables:
     exp = expected_tables['avistamientos']['columns'].get('id_animal')
     if exp is None:
-        print('Model does NOT expect id_animal column on avistamientos (unexpected).')
+        logger.info('Model does NOT expect id_animal column on avistamientos (unexpected).')
     else:
-        print('Model EXPECTS:', exp)
+        logger.info('Model EXPECTS: %s', exp)
         if 'avistamientos' not in actual_tables:
-            print('Table avistamientos missing in DB.')
+            logger.info('Table avistamientos missing in DB.')
         else:
             if 'id_animal' not in actual_tables['avistamientos']['columns']:
-                print('ACTUAL: id_animal column is MISSING in DB (confirmed).')
+                logger.info('ACTUAL: id_animal column is MISSING in DB (confirmed).')
             else:
-                print('ACTUAL: id_animal column exists in DB:', actual_tables['avistamientos']['columns']['id_animal'])
+                logger.info('ACTUAL: id_animal column exists in DB: %s', actual_tables['avistamientos']['columns']['id_animal'])
 
 # Exit with success
 sys.exit(0)

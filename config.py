@@ -44,3 +44,6 @@ ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "60")
 # ==========================================
 ENVIRONMENT = os.getenv("ENVIRONMENT", "development")
 DEBUG = ENVIRONMENT == "development"
+
+# Optional version metadata for startup logging
+APP_VERSION = os.getenv("APP_VERSION", "unknown")

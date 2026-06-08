@@ -6,13 +6,16 @@ Run with the project's Python executable.
 from database import engine, SessionLocal
 import models
 from datetime import datetime
+import logging_config
 
-print('Dropping all tables...')
+logger = logging_config.get_logger(__name__)
+
+logger.info('Dropping all tables...')
 models.Base.metadata.drop_all(bind=engine)
-print('Creating all tables from models...')
+logger.info('Creating all tables from models...')
 models.Base.metadata.create_all(bind=engine)
 
-print('Seeding niveles...')
+logger.info('Seeding niveles...')
 s = SessionLocal()
 try:
     # Clear any existing rows (should be empty after drop)
@@ -27,8 +30,8 @@ try:
     ]
     s.add_all(niveles)
     s.commit()
-    print('Seeded niveles successfully.')
+    logger.info('Seeded niveles successfully.')
 finally:
     s.close()
 
-print('DB reset complete.')
+logger.info('DB reset complete.')

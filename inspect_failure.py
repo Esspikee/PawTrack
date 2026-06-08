@@ -2,17 +2,20 @@ import requests
 from database import SessionLocal
 import models
 import time
+import logging_config
+
+logger = logging_config.get_logger(__name__)
 
 BASE = "http://127.0.0.1:8001"
 payload = {'username':'traceuser','email':'traceuser@example.com','password':'Password123'}
 
-print('Sending POST /usuarios...')
+logger.info('Sending POST /usuarios...')
 r = requests.post(f"{BASE}/usuarios", json=payload)
-print('Response status:', r.status_code)
+logger.info('Response status: %s', r.status_code)
 try:
-    print('Response body:', r.json())
-except Exception as e:
-    print('Response text:', r.text)
+    logger.info('Response body: %s', r.json())
+except Exception:
+    logger.warning('Response text: %s', r.text)
 
 # Wait a moment for server logs to flush
 time.sleep(0.5)
@@ -21,13 +24,13 @@ time.sleep(0.5)
 db = SessionLocal()
 try:
     user = db.query(models.Usuario).filter(models.Usuario.email==payload['email']).first()
-    print('\nQueried DB user object:')
-    print('type:', type(user))
+    logger.info('Queried DB user object')
+    logger.info('type: %s', type(user))
     if user:
         # Print attribute dict of the SQLAlchemy object
         attrs = {c.name: getattr(user, c.name) for c in user.__table__.columns}
-        print('attributes:', attrs)
+        logger.info('attributes: %s', attrs)
     else:
-        print('No user found in DB with that email')
+        logger.info('No user found in DB with that email')
 finally:
     db.close()

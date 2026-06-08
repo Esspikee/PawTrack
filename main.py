@@ -14,13 +14,24 @@ from datetime import datetime, timezone, timedelta
 
 # Importaciones locales
 from database import engine, SessionLocal
-import models, schemas, security
+import models, schemas, security, config, logging_config
+
+logger = logging_config.get_logger(__name__)
 
 # 1. Le decimos a SQLAlchemy que construya las tablas si no existen
 models.Base.metadata.create_all(bind=engine)
 
 # 2. Inicializamos la aplicación
 app = FastAPI(title="PawTrack API", description="API para el rastreo comunitario de mascotas")
+
+@app.on_event("startup")
+async def startup_event():
+    logger.info(
+        "PawTrack backend started successfully | environment=%s | db_configured=%s | version=%s",
+        config.ENVIRONMENT,
+        bool(config.DATABASE_URL),
+        config.APP_VERSION,
+    )
 
 # Rate limiting (slowapi)
 limiter = Limiter(key_func=get_remote_address)
@@ -48,12 +59,28 @@ AVISTAMIENTO_COOLDOWN_MINUTES = 5
 # ==========================================
 @app.exception_handler(IntegrityError)
 async def integrity_error_handler(request: Request, exc: IntegrityError):
-    print(f"🔥 Error interceptado en la BD: {exc}")
+    logger.exception(
+        "IntegrityError intercepted while processing request %s",
+        request.url.path,
+        exc_info=True,
+    )
     return JSONResponse(
         status_code=400,
         content={
             "detail": "Error de integridad de datos. Verifica que el payload enviado cumpla con las reglas de la BD."
         },
+    )
+
+@app.exception_handler(Exception)
+async def general_exception_handler(request: Request, exc: Exception):
+    logger.exception(
+        "Unhandled exception during request %s",
+        request.url.path,
+        exc_info=True,
+    )
+    return JSONResponse(
+        status_code=500,
+        content={"detail": "Internal server error. Please contact support if the problem persists."},
     )
 
 # ==========================================
@@ -72,10 +99,11 @@ def commit_db(db: Session):
         db.commit()
     except Exception:
         db.rollback()
+        logger.exception("Database transaction failed, rollback executed", exc_info=True)
         raise
 
 
-def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db)):
+def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(get_db), request: Request = None):
     credentials_exception = HTTPException(
         status_code=status.HTTP_401_UNAUTHORIZED,
         detail="No se pudieron validar las credenciales o el token ha expirado",
@@ -85,13 +113,24 @@ def get_current_user(token: str = Depends(oauth2_scheme), db: Session = Depends(
         payload = jwt.decode(token, security.SECRET_KEY, algorithms=[security.ALGORITHM])
         email: str = payload.get("sub")
         if email is None:
+            logger.warning("JWT token decoded without subject", extra={"client_ip": request.client.host if request and request.client else "unknown"})
             raise credentials_exception
         token_data = schemas.TokenData(email=email)
-    except JWTError:
-        raise credentials_exception
+    except JWTError as exc:
+        logger.warning(
+            "JWT validation failed while authenticating request %s | client_ip=%s",
+            request.url.path if request else "unknown",
+            request.client.host if request and request.client else "unknown",
+        )
+        raise credentials_exception from exc
         
     usuario = db.query(models.Usuario).filter(models.Usuario.email == token_data.email).first()
     if usuario is None:
+        logger.warning(
+            "JWT validated email not found in DB | email=%s | client_ip=%s",
+            token_data.email,
+            request.client.host if request and request.client else "unknown",
+        )
         raise credentials_exception
         
     return usuario
@@ -163,19 +202,36 @@ def crear_usuario(usuario: schemas.UsuarioCreate, db: Session = Depends(get_db),
     db.add(nuevo_usuario)
     commit_db(db)
     db.refresh(nuevo_usuario)
+
+    logger.info(
+        "User registered | username=%s | user_id=%s",
+        usuario.username,
+        nuevo_usuario.id_usuario,
+    )
     return nuevo_usuario
 
 @app.post("/login", response_model=schemas.Token)
 @limiter.limit("5/minute")
 def login(form_data: OAuth2PasswordRequestForm = Depends(), db: Session = Depends(get_db), request: Request = None):
     usuario_db = db.query(models.Usuario).filter(models.Usuario.email == form_data.username).first()
+    client_ip = request.client.host if request and request.client else "unknown"
     if not usuario_db or not security.verificar_password(form_data.password, usuario_db.password):
+        logger.warning(
+            "Login failed | attempted_email=%s | client_ip=%s",
+            form_data.username,
+            client_ip,
+        )
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
             detail="Correo o contraseña incorrectos",
             headers={"WWW-Authenticate": "Bearer"},
         )
     access_token = security.crear_token_acceso(data={"sub": usuario_db.email})
+    logger.info(
+        "Login successful | user_id=%s | email=%s",
+        usuario_db.id_usuario,
+        usuario_db.email,
+    )
     return {"access_token": access_token, "token_type": "bearer"}
 
 # ==========================================
@@ -236,6 +292,12 @@ def registrar_nuevo_animal(
 
     commit_db(db)
     db.refresh(nuevo_animal)
+
+    logger.info(
+        "Animal created | animal_id=%s | especie=%s",
+        nuevo_animal.id_animal,
+        nuevo_animal.especie,
+    )
     return nuevo_animal
 
 @app.put("/animales/{id_animal}", response_model=schemas.AnimalResponse)
@@ -304,6 +366,13 @@ def agregar_avistamiento(
     # 6. Guardar transacción completa
     commit_db(db)
     db.refresh(nuevo_avistamiento)
+
+    logger.info(
+        "Sighting created | user_id=%s | animal_id=%s | sighting_id=%s",
+        current_user.id_usuario,
+        animal_db.id_animal,
+        nuevo_avistamiento.id_avistamiento,
+    )
     return nuevo_avistamiento
 
 @app.get("/animales/{id_animal}/historial", response_model=List[schemas.AvistamientoResponse])
@@ -355,7 +424,11 @@ def confirmar_avistamiento(
 
     commit_db(db)
     db.refresh(nueva_confirmacion)
-    
+    logger.info(
+        "Sighting confirmed | user_id=%s | sighting_id=%s",
+        current_user.id_usuario,
+        nueva_confirmacion.id_avistamiento,
+    )
     return nueva_confirmacion
 
 @app.delete("/avistamientos/{id_avistamiento}/confirmar")
