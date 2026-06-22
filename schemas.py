@@ -111,7 +111,9 @@ class AnimalCreate(BaseModel):
     foto_principal: Optional[str] = None
     latitud: float
     longitud: float
-    descripcion: str
+    # Opcional: el formulario de captura solo pide especie + color. Si no se
+    # envía descripción, el endpoint la guarda como "" (la columna sigue NOT NULL).
+    descripcion: Optional[str] = None
 
 class AnimalUpdate(BaseModel):
     especie: EspeciePermitida

@@ -458,7 +458,7 @@ def registrar_nuevo_animal(
         id_usuario=current_user.id_usuario,
         latitud=datos.latitud,
         longitud=datos.longitud,
-        descripcion=datos.descripcion,
+        descripcion=datos.descripcion or "",
         foto_url=datos.foto_principal,
         fecha_creacion=ahora
     )

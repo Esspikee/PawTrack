@@ -5,3 +5,6 @@ __pycache__/
 
 # Imágenes subidas localmente (contenido de usuario, no se versiona)
 uploads/
+
+# Configuración local de Claude Code (no se versiona)
+.claude/
