@@ -1,5 +1,5 @@
 from fastapi import FastAPI, Depends, HTTPException, Request, status, UploadFile, File
-from fastapi.responses import JSONResponse
+from fastapi.responses import JSONResponse, FileResponse
 from fastapi.staticfiles import StaticFiles
 from fastapi.security import OAuth2PasswordBearer, OAuth2PasswordRequestForm
 from fastapi.middleware.cors import CORSMiddleware
@@ -143,6 +143,12 @@ def _content_matches_declared_type(content_type: str, header: bytes) -> bool:
 # 5. Servir archivos estáticos: las imágenes subidas quedan disponibles en /uploads/<archivo>
 app.mount("/uploads", StaticFiles(directory=UPLOADS_DIR), name="uploads")
 
+# Build de producción del frontend (Vite). Cuando existe, el backend sirve la
+# app web en el MISMO origen que la API (ver catch-all al final del archivo).
+# Esto elimina la necesidad de CORS y de un host de frontend separado: un solo
+# proceso y un solo túnel HTTPS exponen app + API.
+FRONTEND_DIST = Path(__file__).resolve().parent / "frontend" / "dist"
+
 # ==========================================
 # MANEJO DE ERRORES GLOBALES
 # ==========================================
@@ -241,6 +247,10 @@ def actualizar_nivel_usuario(usuario: models.Usuario, db: Session):
 # ==========================================
 @app.get("/")
 def inicio():
+    # Si hay build del frontend, la raíz sirve la app web; si no, responde el
+    # "heartbeat" JSON histórico (útil para backend-only / pruebas).
+    if FRONTEND_DIST.is_dir():
+        return FileResponse(FRONTEND_DIST / "index.html")
     return {"mensaje": "¡El servidor de PawTrack está vivo! 🐾"}
 
 # ==========================================
@@ -736,3 +746,26 @@ def obtener_confirmaciones(id_avistamiento: str, db: Session = Depends(get_db)):
         "cantidad_total": len(confirmaciones),
         "usuarios": usuarios_que_confirmaron
     }
+
+
+# ==========================================
+# FRONTEND ESTÁTICO (SPA) — catch-all al MISMO origen que la API.
+# Debe declararse AL FINAL: las rutas de la API ya están registradas y tienen
+# prioridad. Solo las rutas GET no reconocidas (páginas del router del cliente,
+# assets del build) caen aquí. Las rutas de API usan vocabulario distinto
+# (/usuarios, /animales, /avistamientos) al del frontend (/animals, /dashboard),
+# así que no hay colisión.
+# ==========================================
+if FRONTEND_DIST.is_dir():
+    _DIST_ROOT = FRONTEND_DIST.resolve()
+
+    @app.get("/{full_path:path}", include_in_schema=False)
+    def servir_spa(full_path: str):
+        # Sirve un archivo real del build si existe (assets, manifest, favicon…);
+        # de lo contrario devuelve index.html para que el router del cliente
+        # resuelva la navegación. Se valida que la ruta quede dentro de dist
+        # (defensa contra path traversal).
+        candidate = (_DIST_ROOT / full_path).resolve()
+        if candidate.is_file() and (candidate == _DIST_ROOT or _DIST_ROOT in candidate.parents):
+            return FileResponse(candidate)
+        return FileResponse(_DIST_ROOT / "index.html")

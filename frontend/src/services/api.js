@@ -1,7 +1,13 @@
 const DEFAULT_BASE_URL = "http://127.0.0.1:8000";
 const TOKEN_KEY = "pawtrack_access_token";
 
-export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
+// Si VITE_API_BASE_URL está definida (incluso como cadena vacía) se respeta:
+// "" hace que las peticiones sean relativas al MISMO origen, que es el modo en
+// el que el backend sirve el frontend (un solo host, sin CORS). Solo cuando la
+// variable NO está definida usamos el default de desarrollo (frontend en :5173
+// y backend en :8000 como orígenes separados).
+const configuredBaseUrl = import.meta.env.VITE_API_BASE_URL;
+export const API_BASE_URL = (configuredBaseUrl ?? DEFAULT_BASE_URL).replace(/\/$/, "");
 export const AUTH_TOKEN_CLEARED_EVENT = "pawtrack:auth-token-cleared";
 
 export class ApiError extends Error {
