@@ -2,8 +2,10 @@
 __pycache__/
 *.pyc
 .env
+.pnpm-store/
+smoke_test_results.json
 
-# Imágenes subidas localmente (contenido de usuario, no se versiona)
+# Local user-uploaded images are not versioned.
 uploads/
 
 # Configuración local de Claude Code (no se versiona)

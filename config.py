@@ -51,3 +51,7 @@ RATE_LIMIT_ENABLED = os.getenv("RATE_LIMIT_ENABLED", "true").strip().lower() not
 
 # Optional version metadata for startup logging
 APP_VERSION = os.getenv("APP_VERSION", "unknown")
+
+# Local uploads directory. In production, point this to a persistent disk path
+# if the host filesystem is ephemeral.
+UPLOADS_DIR = os.getenv("UPLOADS_DIR")

@@ -108,9 +108,13 @@ oauth2_scheme = OAuth2PasswordBearer(tokenUrl="login")
 # ==========================================
 # CONFIGURACIÓN DE CARGA DE IMÁGENES (LOCAL, MVP)
 # ==========================================
-# Directorio anclado a la ubicación de este archivo (NO al CWD), de modo que
-# la ruta de escritura es siempre la misma sin importar desde dónde se lance.
-UPLOADS_DIR = Path(__file__).resolve().parent / "uploads"
+# Directorio anclado a la ubicación de este archivo (NO al CWD), salvo que
+# despliegue configure UPLOADS_DIR para apuntar a un disco persistente.
+UPLOADS_DIR = (
+    Path(config.UPLOADS_DIR).expanduser()
+    if config.UPLOADS_DIR
+    else Path(__file__).resolve().parent / "uploads"
+)
 # Se crea automáticamente al iniciar la app (y antes de montar StaticFiles).
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 

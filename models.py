@@ -1,10 +1,39 @@
-from sqlalchemy import Column, String, Integer, Float, ForeignKey, DateTime, Enum as SQLEnum, UniqueConstraint
-from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy import CHAR, Column, String, Integer, Float, ForeignKey, DateTime, Enum as SQLEnum, UniqueConstraint
+from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import relationship
+from sqlalchemy.types import TypeDecorator
 from database import Base
 from datetime import datetime, timezone
 import uuid
 import enum
+
+
+class GUID(TypeDecorator):
+    """Platform-independent UUID type.
+
+    Uses PostgreSQL's native UUID type in production and stores UUID strings on
+    lightweight local/test databases such as SQLite.
+    """
+
+    impl = CHAR
+    cache_ok = True
+
+    def load_dialect_impl(self, dialect):
+        if dialect.name == "postgresql":
+            return dialect.type_descriptor(PG_UUID(as_uuid=True))
+        return dialect.type_descriptor(CHAR(36))
+
+    def process_bind_param(self, value, dialect):
+        if value is None:
+            return None
+        if not isinstance(value, uuid.UUID):
+            value = uuid.UUID(str(value))
+        return value if dialect.name == "postgresql" else str(value)
+
+    def process_result_value(self, value, dialect):
+        if value is None or isinstance(value, uuid.UUID):
+            return value
+        return uuid.UUID(str(value))
 
 # ==========================================
 # ==========================================
@@ -27,7 +56,7 @@ class Nivel(Base):
 class Usuario(Base):
     __tablename__ = "usuarios"
     
-    id_usuario = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
+    id_usuario = Column(GUID(), primary_key=True, default=uuid.uuid4)
     username = Column(String(50), unique=True, nullable=False)
     email = Column(String(100), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
@@ -56,8 +85,8 @@ class Usuario(Base):
 class Animal(Base):
     __tablename__ = "animales"
     
-    id_animal = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    id_descubridor = Column(UUID(as_uuid=True), ForeignKey("usuarios.id_usuario"), nullable=False)
+    id_animal = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    id_descubridor = Column(GUID(), ForeignKey("usuarios.id_usuario"), nullable=False)
     especie = Column(SQLEnum(EspeciePermitida), nullable=False)
     color_principal = Column(String(50), nullable=False)
     foto_principal = Column(String(255), nullable=True)
@@ -80,9 +109,9 @@ class Animal(Base):
 class Avistamiento(Base):
     __tablename__ = "avistamientos"
     
-    id_avistamiento = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    id_animal = Column(UUID(as_uuid=True), ForeignKey("animales.id_animal"), nullable=False)
-    id_usuario = Column(UUID(as_uuid=True), ForeignKey("usuarios.id_usuario"), nullable=False)
+    id_avistamiento = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    id_animal = Column(GUID(), ForeignKey("animales.id_animal"), nullable=False)
+    id_usuario = Column(GUID(), ForeignKey("usuarios.id_usuario"), nullable=False)
     
     latitud = Column(Float, nullable=False)
     longitud = Column(Float, nullable=False)
@@ -103,9 +132,9 @@ class Avistamiento(Base):
 class Confirmacion(Base):
     __tablename__ = "confirmaciones"
 
-    id_confirmacion = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4)
-    id_usuario = Column(UUID(as_uuid=True), ForeignKey("usuarios.id_usuario"), nullable=False)
-    id_avistamiento = Column(UUID(as_uuid=True), ForeignKey("avistamientos.id_avistamiento"), nullable=False)
+    id_confirmacion = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    id_usuario = Column(GUID(), ForeignKey("usuarios.id_usuario"), nullable=False)
+    id_avistamiento = Column(GUID(), ForeignKey("avistamientos.id_avistamiento"), nullable=False)
     fecha_confirmacion = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
     # Relaciones

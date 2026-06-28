@@ -1,21 +1,33 @@
-import requests
+import json
 from database import SessionLocal
 import models
+import os
 import time
+import urllib.error
+import urllib.request
 import logging_config
 
 logger = logging_config.get_logger(__name__)
 
-BASE = "http://127.0.0.1:8001"
+BASE = os.getenv("PAWTRACK_API_BASE", "http://127.0.0.1:8000").rstrip("/")
 payload = {'username':'traceuser','email':'traceuser@example.com','password':'Password123'}
 
-logger.info('Sending POST /usuarios...')
-r = requests.post(f"{BASE}/usuarios", json=payload)
-logger.info('Response status: %s', r.status_code)
+logger.info('Sending POST /usuarios/ to %s...', BASE)
+request = urllib.request.Request(
+    f"{BASE}/usuarios/",
+    data=json.dumps(payload).encode("utf-8"),
+    headers={"Content-Type": "application/json"},
+    method="POST",
+)
 try:
-    logger.info('Response body: %s', r.json())
-except Exception:
-    logger.warning('Response text: %s', r.text)
+    with urllib.request.urlopen(request, timeout=20) as response:
+        body = response.read().decode("utf-8")
+        logger.info('Response status: %s', response.status)
+        logger.info('Response body: %s', json.loads(body) if body else None)
+except urllib.error.HTTPError as error:
+    body = error.read().decode("utf-8")
+    logger.info('Response status: %s', error.code)
+    logger.warning('Response body: %s', body)
 
 # Wait a moment for server logs to flush
 time.sleep(0.5)

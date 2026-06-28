@@ -1,127 +1,141 @@
-import { useEffect, useMemo, useState } from "react";
-import { animals as initialAnimals, currentUser as initialUser } from "../data/mockData";
+import { useCallback, useEffect, useMemo, useState } from "react";
+import { api, clearToken, hasToken, setToken } from "../services/api";
+import { mapAnimal, mapSighting, mapUser } from "../utils/dataMappers";
 import { PawTrackContext } from "./usePawTrack";
 
-const STORAGE_KEY = "pawtrack_mock_state_v2";
-
-function readStoredState() {
-  try {
-    const stored = window.localStorage.getItem(STORAGE_KEY);
-    return stored ? JSON.parse(stored) : null;
-  } catch {
-    return null;
-  }
-}
-
-const avatarBySpecies = {
-  gato: "cat",
-  perro: "golden",
-};
-
-function createId(value) {
-  return value
-    .toLowerCase()
-    .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "")
-    .replace(/[^a-z0-9]+/g, "-")
-    .replace(/(^-|-$)/g, "");
-}
-
 export function PawTrackProvider({ children }) {
-  const storedState = readStoredState();
-  const [animals, setAnimals] = useState(storedState?.animals ?? initialAnimals);
-  const [currentUser, setCurrentUser] = useState(storedState?.currentUser ?? initialUser);
+  const [animals, setAnimals] = useState([]);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [authenticated, setAuthenticated] = useState(hasToken());
+  const [animalsLoading, setAnimalsLoading] = useState(true);
+  const [userLoading, setUserLoading] = useState(hasToken());
+  const [animalsError, setAnimalsError] = useState("");
+  const [userError, setUserError] = useState("");
+
+  const loadAnimals = useCallback(async () => {
+    setAnimalsLoading(true);
+    setAnimalsError("");
+    try {
+      const data = await api.listAnimals();
+      const mapped = data
+        .map(mapAnimal)
+        .sort((a, b) => new Date(b.lastSeenAt) - new Date(a.lastSeenAt));
+      setAnimals(mapped);
+      return mapped;
+    } catch (error) {
+      setAnimalsError(error.message);
+      throw error;
+    } finally {
+      setAnimalsLoading(false);
+    }
+  }, []);
+
+  const loadCurrentUser = useCallback(async () => {
+    if (!hasToken()) {
+      setAuthenticated(false);
+      setCurrentUser(null);
+      setUserLoading(false);
+      return null;
+    }
+
+    setUserLoading(true);
+    setUserError("");
+    try {
+      const user = mapUser(await api.getMe());
+      setCurrentUser(user);
+      setAuthenticated(true);
+      return user;
+    } catch (error) {
+      setUserError(error.message);
+      throw error;
+    } finally {
+      setUserLoading(false);
+    }
+  }, []);
 
   useEffect(() => {
-    window.localStorage.setItem(
-      STORAGE_KEY,
-      JSON.stringify({
-        animals,
-        currentUser,
-      }),
-    );
-  }, [animals, currentUser]);
+    const timer = window.setTimeout(() => loadAnimals().catch(() => {}), 0);
+    return () => window.clearTimeout(timer);
+  }, [loadAnimals]);
 
-  const addAnimal = (formData) => {
-    const id = createId(formData.name) || `animal-${Date.now()}`;
-    const animal = {
-      id,
-      name: formData.name,
-      species: formData.species,
-      breed: formData.color,
-      color: formData.color,
-      lastSeen: formData.location,
-      lastSeenAgo: "Ahora",
-      description: formData.description,
-      sightings: 1,
-      avatar: avatarBySpecies[formData.species.toLowerCase()] ?? "husky",
-      history: [
-        {
-          id: `${id}-1`,
-          location: formData.location,
-          date: formData.date,
-          time: formData.time,
-          description: formData.description,
-        },
-      ],
-    };
+  useEffect(() => {
+    if (authenticated) {
+      const timer = window.setTimeout(() => loadCurrentUser().catch(() => {}), 0);
+      return () => window.clearTimeout(timer);
+    }
+    return undefined;
+  }, [authenticated, loadCurrentUser]);
 
-    setAnimals((items) => [animal, ...items.filter((item) => item.id !== id)]);
-    setCurrentUser((user) => ({
-      ...user,
-      animalsDiscovered: user.animalsDiscovered + 1,
-      sightings: user.sightings + 1,
-      points: user.points + 10,
-      xp: Math.min(user.nextLevelXp, user.xp + 10),
-    }));
+  const login = useCallback(async (email, password) => {
+    const result = await api.login(email, password);
+    setToken(result.access_token);
+    setAuthenticated(true);
+    return loadCurrentUser();
+  }, [loadCurrentUser]);
 
+  const register = useCallback((data) => api.register(data), []);
+
+  const logout = useCallback(() => {
+    clearToken();
+    setAuthenticated(false);
+    setCurrentUser(null);
+  }, []);
+
+  const createAnimal = useCallback(async (payload) => {
+    const animal = mapAnimal(await api.createAnimal(payload));
+    setAnimals((items) => [animal, ...items.filter((item) => item.id !== animal.id)]);
+    await loadCurrentUser();
     return animal;
-  };
+  }, [loadCurrentUser]);
 
-  const addSighting = (animalId, formData) => {
-    let updatedAnimal;
+  const addSighting = useCallback(async (animalId, payload) => {
+    const sighting = mapSighting(await api.addSighting(animalId, payload));
+    await Promise.all([loadAnimals(), loadCurrentUser()]);
+    return sighting;
+  }, [loadAnimals, loadCurrentUser]);
 
-    setAnimals((items) =>
-      items.map((animal) => {
-        if (animal.id !== animalId) {
-          return animal;
-        }
+  const loadAnimalDetail = useCallback(async (animalId) => mapAnimal(await api.getAnimal(animalId)), []);
 
-        updatedAnimal = {
-          ...animal,
-          lastSeen: formData.location,
-          lastSeenAgo: "Ahora",
-          sightings: animal.sightings + 1,
-          history: [
-            {
-              id: `${animal.id}-${animal.sightings + 1}`,
-              location: formData.location,
-              date: formData.date,
-              time: formData.time,
-              description: formData.description,
-            },
-            ...(animal.history ?? []),
-          ],
-        };
+  const loadHistory = useCallback(async (animalId) => {
+    const data = await api.getAnimalHistory(animalId);
+    return data.map(mapSighting);
+  }, []);
 
-        return updatedAnimal;
-      }),
-    );
-
-    setCurrentUser((user) => ({
-      ...user,
-      sightings: user.sightings + 1,
-      points: user.points + 5,
-      xp: Math.min(user.nextLevelXp, user.xp + 5),
-    }));
-
-    return updatedAnimal;
-  };
-
-  const value = useMemo(
-    () => ({ addAnimal, addSighting, animals, currentUser }),
-    [animals, currentUser],
-  );
+  const value = useMemo(() => ({
+    addSighting,
+    animals,
+    animalsError,
+    animalsLoading,
+    authenticated,
+    createAnimal,
+    currentUser,
+    loadAnimalDetail,
+    loadAnimals,
+    loadCurrentUser,
+    loadHistory,
+    login,
+    logout,
+    register,
+    userError,
+    userLoading,
+  }), [
+    addSighting,
+    animals,
+    animalsError,
+    animalsLoading,
+    authenticated,
+    createAnimal,
+    currentUser,
+    loadAnimalDetail,
+    loadAnimals,
+    loadCurrentUser,
+    loadHistory,
+    login,
+    logout,
+    register,
+    userError,
+    userLoading,
+  ]);
 
   return <PawTrackContext.Provider value={value}>{children}</PawTrackContext.Provider>;
 }

@@ -1,53 +1,50 @@
-import { Link } from "react-router-dom";
 import Icon from "../components/Icon";
 import PixelButton from "../components/PixelButton";
-import TopBar from "../components/TopBar";
+import heroImage from "../assets/hero.png";
 
 function Login() {
   return (
-    <main className="auth-screen">
-      <TopBar backTo="/" title="Iniciar sesion" />
-      <section className="auth-card">
-        <div className="section-divider">
-          <span />
-        </div>
+    <main className="splash-screen">
+      <section className="splash-phone" aria-label="Bienvenida a PawTrack">
+        <span aria-hidden="true" className="splash-spark spark-top-left" />
+        <span aria-hidden="true" className="splash-spark spark-top-right" />
+        <span aria-hidden="true" className="splash-spark spark-bottom-left" />
+        <span aria-hidden="true" className="splash-spark spark-bottom-right" />
 
-        <form className="auth-form">
-          <label>
-            Correo electronico
-            <span className="input-wrap">
-              <input placeholder="ejemplo@correo.com" type="email" />
-              <Icon name="mail" size={20} />
-            </span>
-          </label>
+        <header className="splash-logo-panel">
+          <Icon name="paw" size={22} />
+          <span>PawTrack</span>
+          <Icon name="paw" size={20} />
+        </header>
 
-          <label>
-            Contrasena
-            <span className="input-wrap">
-              <input placeholder="********" type="password" />
-              <Icon name="eye" size={20} />
-            </span>
-          </label>
+        <figure className="splash-hero">
+          <img
+            className="hero-image"
+            alt="Perro husky y gato negro en una ciudad nocturna"
+            src={heroImage}
+          />
+        </figure>
 
-          <Link className="tiny-link" to="#">
-            Olvidaste tu contrasena?
-          </Link>
+        <section className="splash-message-panel">
+          <span aria-hidden="true" className="hud-corner corner-top-left" />
+          <span aria-hidden="true" className="hud-corner corner-top-right" />
+          <span aria-hidden="true" className="hud-corner corner-bottom-left" />
+          <span aria-hidden="true" className="hud-corner corner-bottom-right" />
+          <p>
+            Encuentra mascotas y
+            <br />
+            ayuda a tu comunidad.
+          </p>
+        </section>
 
-          <PixelButton className="full-width" to="/dashboard">
+        <nav className="splash-actions" aria-label="Acceso">
+          <PixelButton className="splash-primary" to="/login-form">
             Iniciar sesion
           </PixelButton>
-        </form>
-
-        <div className="auth-separator">
-          <span />
-          <small>o</small>
-          <span />
-        </div>
-
-        <p className="auth-switch">No tienes cuenta?</p>
-        <PixelButton className="full-width" to="/register" variant="secondary">
-          Registrate
-        </PixelButton>
+          <PixelButton className="splash-secondary" to="/register" variant="secondary">
+            Registrarse
+          </PixelButton>
+        </nav>
       </section>
     </main>
   );

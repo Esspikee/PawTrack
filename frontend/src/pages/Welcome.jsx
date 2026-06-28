@@ -1,4 +1,5 @@
 import Icon from "../components/Icon";
+import HeartOrnament from "../components/HeartOrnament";
 import NightScene from "../components/NightScene";
 import PixelButton from "../components/PixelButton";
 
@@ -15,6 +16,7 @@ function Welcome() {
         <NightScene />
 
         <div className="message-box">
+          <HeartOrnament />
           <p>Encuentra mascotas y ayuda a tu comunidad.</p>
         </div>
 

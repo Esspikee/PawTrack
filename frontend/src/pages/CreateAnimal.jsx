@@ -2,23 +2,21 @@ import { useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppShell from "../components/AppShell";
 import Icon from "../components/Icon";
+import PhotoCapture from "../components/PhotoCapture";
 import PixelButton from "../components/PixelButton";
 import TopBar from "../components/TopBar";
 import { usePawTrack } from "../context/usePawTrack";
+import { useGeolocation } from "../hooks/useGeolocation";
 
-const initialForm = {
-  name: "",
-  species: "Perro",
-  color: "",
-  location: "",
-  date: "19/06/2026",
-  time: "20:30",
-  description: "",
-};
+const initialForm = { species: "Perro", color: "", description: "" };
 
 function CreateAnimal() {
   const [form, setForm] = useState(initialForm);
-  const { addAnimal } = usePawTrack();
+  const [photoUrl, setPhotoUrl] = useState("");
+  const [submitting, setSubmitting] = useState(false);
+  const [formError, setFormError] = useState("");
+  const { coordinates, locate, locating, locationError, setCoordinates } = useGeolocation();
+  const { createAnimal } = usePawTrack();
   const navigate = useNavigate();
 
   const updateField = (event) => {
@@ -26,40 +24,79 @@ function CreateAnimal() {
     setForm((current) => ({ ...current, [name]: value }));
   };
 
-  const handleSubmit = (event) => {
+  const updateCoordinate = (event) => {
+    const { name, value } = event.target;
+    setCoordinates((current) => ({ ...current, [name]: value }));
+  };
+
+  const handleSubmit = async (event) => {
     event.preventDefault();
-    const animal = addAnimal(form);
-    navigate(`/animals/${animal.id}`);
+    setFormError("");
+    const latitude = Number(coordinates.latitude);
+    const longitude = Number(coordinates.longitude);
+
+    if (!photoUrl) {
+      setFormError("Toma una foto y espera a que termine de subir.");
+      return;
+    }
+    if (!Number.isFinite(latitude) || !Number.isFinite(longitude)
+      || latitude < -90 || latitude > 90 || longitude < -180 || longitude > 180) {
+      setFormError("Necesitamos una ubicacion valida para crear el pin.");
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      const animal = await createAnimal({
+        especie: form.species,
+        color_principal: form.color.trim(),
+        latitud: latitude,
+        longitud: longitude,
+        foto_principal: photoUrl,
+        descripcion: form.description.trim(),
+      });
+      navigate(`/animals/${animal.id}`, { replace: true });
+    } catch (error) {
+      setFormError(error.message);
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
     <AppShell>
-      <TopBar backTo="/animals" title="Anadir animal" />
+      <TopBar backTo="/animals" title="Nuevo animal" />
 
-      <form className="report-form" onSubmit={handleSubmit}>
-        <label>
-          Nombre
-          <span className="input-wrap">
-            <input
-              name="name"
-              onChange={updateField}
-              placeholder="Ej. Canela"
-              required
-              type="text"
-              value={form.name}
-            />
-            <Icon name="paw" size={20} />
-          </span>
-        </label>
+      <form className="report-form capture-form" onSubmit={handleSubmit}>
+        {formError && <p className="form-message error" role="alert">{formError}</p>}
 
+        <div className="form-section-title"><Icon name="camera" size={20} /><span>1. Foto</span></div>
+        <PhotoCapture onUploaded={setPhotoUrl} required />
+
+        <div className="form-section-title"><Icon name="mapPin" size={20} /><span>2. Ubicacion</span></div>
+        <div className="location-status">
+          <span>{locating ? "Buscando tu ubicacion..." : coordinates.latitude ? "Ubicacion lista" : "Ubicacion pendiente"}</span>
+          <button className="mini-pixel-button" disabled={locating} onClick={locate} type="button">
+            {locating ? "Buscando" : "Localizar"}
+          </button>
+        </div>
+        {locationError && <p className="form-message warning">{locationError}</p>}
+        <div className="coordinate-grid">
+          <label>
+            Latitud
+            <span className="input-wrap"><input name="latitude" onChange={updateCoordinate} required step="any" type="number" value={coordinates.latitude} /><Icon name="mapPin" size={18} /></span>
+          </label>
+          <label>
+            Longitud
+            <span className="input-wrap"><input name="longitude" onChange={updateCoordinate} required step="any" type="number" value={coordinates.longitude} /><Icon name="mapPin" size={18} /></span>
+          </label>
+        </div>
+
+        <div className="form-section-title"><Icon name="paw" size={20} /><span>3. Datos rapidos</span></div>
         <label>
           Especie
           <span className="input-wrap">
-            <select name="species" onChange={updateField} value={form.species}>
-              <option>Perro</option>
-              <option>Gato</option>
-              <option>Otro</option>
-            </select>
+            <select name="species" onChange={updateField} value={form.species}><option>Perro</option><option>Gato</option></select>
             <Icon name="paw" size={20} />
           </span>
         </label>
@@ -67,56 +104,18 @@ function CreateAnimal() {
         <label>
           Color principal
           <span className="input-wrap">
-            <input
-              name="color"
-              onChange={updateField}
-              placeholder="Dorado, blanco, atigrado..."
-              required
-              type="text"
-              value={form.color}
-            />
+            <input name="color" onChange={updateField} placeholder="Negro, blanco, dorado..." required type="text" value={form.color} />
             <Icon name="star" size={20} />
           </span>
         </label>
 
         <label>
-          Ubicacion inicial
-          <span className="input-wrap">
-            <input
-              name="location"
-              onChange={updateField}
-              placeholder="Selecciona en el mapa"
-              required
-              type="text"
-              value={form.location}
-            />
-            <Icon name="mapPin" size={20} />
-          </span>
+          Descripcion opcional
+          <textarea name="description" onChange={updateField} placeholder="Collar, marcas o comportamiento..." rows="4" value={form.description} />
         </label>
 
-        <label>
-          Fecha y hora
-          <span className="split-inputs">
-            <input name="date" onChange={updateField} required type="text" value={form.date} />
-            <input name="time" onChange={updateField} required type="text" value={form.time} />
-            <Icon name="calendar" size={20} />
-          </span>
-        </label>
-
-        <label>
-          Descripcion
-          <textarea
-            name="description"
-            onChange={updateField}
-            placeholder="Describe rasgos, collar o comportamiento..."
-            required
-            rows="5"
-            value={form.description}
-          />
-        </label>
-
-        <PixelButton className="full-width" type="submit">
-          Guardar animal
+        <PixelButton className="full-width" disabled={submitting} type="submit">
+          {submitting ? "Guardando..." : "Crear pin"}
         </PixelButton>
       </form>
     </AppShell>

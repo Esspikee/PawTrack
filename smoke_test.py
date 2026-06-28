@@ -1,99 +1,174 @@
-import requests
-import sys
+import base64
+import json
 import logging_config
+import os
+import time
+import urllib.error
+import urllib.parse
+import urllib.request
 
 logger = logging_config.get_logger(__name__)
 
-BASE = "http://127.0.0.1:8001"
+BASE = os.getenv("PAWTRACK_API_BASE", "http://127.0.0.1:8000").rstrip("/")
+RESULTS_PATH = os.getenv("PAWTRACK_SMOKE_RESULTS", "smoke_test_results.json")
 
-def pretty(resp):
+TINY_PNG = base64.b64decode(
+    "iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR42mP8/x8AAwMCAO+/p9sAAAAASUVORK5CYII="
+)
+
+
+class SmokeFailure(RuntimeError):
+    pass
+
+
+def request(method, path, *, body=None, headers=None, expected=(200,)):
+    url = f"{BASE}{path}"
+    data = None
+    request_headers = dict(headers or {})
+
+    if isinstance(body, dict):
+        data = json.dumps(body).encode("utf-8")
+        request_headers.setdefault("Content-Type", "application/json")
+    elif isinstance(body, str):
+        data = body.encode("utf-8")
+    elif isinstance(body, bytes):
+        data = body
+
+    req = urllib.request.Request(url, data=data, headers=request_headers, method=method)
+
     try:
-        return resp.status_code, resp.json()
-    except Exception:
-        return resp.status_code, resp.text
+        with urllib.request.urlopen(req, timeout=20) as response:
+            raw = response.read().decode("utf-8")
+            status = response.status
+            parsed = json.loads(raw) if raw else None
+    except urllib.error.HTTPError as error:
+        raw = error.read().decode("utf-8")
+        status = error.code
+        try:
+            parsed = json.loads(raw)
+        except json.JSONDecodeError:
+            parsed = raw
+    except urllib.error.URLError as error:
+        raise SmokeFailure(f"Could not reach PawTrack API at {BASE}: {error.reason}") from error
 
-logger.info('Starting smoke tests...')
+    result = {"method": method, "path": path, "status": status, "body": parsed, "ok": status in expected}
+    if status not in expected:
+        raise SmokeFailure(f"{method} {path} returned {status}; expected {expected}. Body: {parsed}")
+    return result
 
-# 1. Create user1
-u1 = {'username':'tester1','email':'tester1@example.com','password':'Password123'}
-r = requests.post(f"{BASE}/usuarios", json=u1)
-logger.info('/usuarios POST -> %s', pretty(r))
 
-# 2. Login user1
-r = requests.post(f"{BASE}/login", data={'username':u1['email'],'password':u1['password']})
-logger.info('/login POST -> %s', pretty(r))
-if r.status_code==200:
-    token1 = r.json().get('access_token')
-else:
-    token1 = None
+def form_body(fields):
+    return urllib.parse.urlencode(fields)
 
-# 3. Get usuarios
-r = requests.get(f"{BASE}/usuarios/")
-logger.info('/usuarios GET -> %s', pretty(r))
 
-# 4. Get animales
-r = requests.get(f"{BASE}/animales/")
-logger.info('/animales GET -> %s', pretty(r))
+def auth(token):
+    return {"Authorization": f"Bearer {token}"}
 
-# 5. Create animal with user1 (if have token)
-if token1:
-    headers = {'Authorization': f'Bearer {token1}'}
-    animal_payload = {
-        'especie':'Perro',
-        'color_principal':'Marron',
-        'foto_principal':None,
-        'latitud':-34.0,
-        'longitud':-58.0,
-        'descripcion':'Perro encontrado cerca del parque'
-    }
-    r = requests.post(f"{BASE}/animales/", json=animal_payload, headers=headers)
-    logger.info('/animales POST -> %s', pretty(r))
-    animal_id = None
-    first_av = None
-    if r.status_code==200 or r.status_code==201:
-        data = r.json()
-        animal_id = data.get('id_animal')
-        avs = data.get('avistamientos')
-        if avs and len(avs)>0:
-            first_av = avs[0].get('id_avistamiento')
-else:
-    logger.warning('Skipping animal creation due to missing token')
 
-# 6. Create user2 and login
-u2 = {'username':'tester2','email':'tester2@example.com','password':'Password123'}
-r = requests.post(f"{BASE}/usuarios", json=u2)
-logger.info('user2 /usuarios POST -> %s', pretty(r))
-r = requests.post(f"{BASE}/login", data={'username':u2['email'],'password':u2['password']})
-logger.info('user2 /login POST -> %s', pretty(r))
-if r.status_code==200:
-    token2 = r.json().get('access_token')
-else:
-    token2 = None
+def safe_result(result):
+    sanitized = dict(result)
+    body = sanitized.get("body")
 
-# 7. User2 adds avistamiento to animal
-if token2 and animal_id:
-    headers2 = {'Authorization': f'Bearer {token2}'}
-    av_payload = {
-        'latitud':-34.0001,
-        'longitud':-58.0001,
-        'descripcion':'Visto de nuevo cerca de la plaza',
-        'foto_url':None
-    }
-    r = requests.post(f"{BASE}/animales/{animal_id}/avistamientos", json=av_payload, headers=headers2)
-    logger.info('/animales/%s/avistamientos POST -> %s', animal_id, pretty(r))
-    if r.status_code==200 or r.status_code==201:
-        av_created = r.json().get('id_avistamiento')
-else:
-    logger.warning('Skipping avistamiento creation')
+    if isinstance(body, dict):
+        body = dict(body)
+        if "access_token" in body:
+            body["access_token"] = "<redacted>"
+        if sanitized.get("path") == "/openapi.json":
+            body = {
+                "openapi": body.get("openapi"),
+                "paths": len(body.get("paths", {})),
+                "schemas": len(body.get("components", {}).get("schemas", {})),
+            }
+    sanitized["body"] = body
+    return sanitized
 
-# 8. User2 confirms first avistamiento (owned by user1)
-if token2 and first_av:
-    r = requests.post(f"{BASE}/avistamientos/{first_av}/confirmar", headers=headers2)
-    logger.info('/avistamientos/%s/confirmar POST -> %s', first_av, pretty(r))
-    # 9. Delete confirmation
-    r = requests.delete(f"{BASE}/avistamientos/{first_av}/confirmar", headers=headers2)
-    logger.info('/avistamientos/%s/confirmar DELETE -> %s', first_av, pretty(r))
-else:
-    logger.warning('Skipping confirmation tests')
 
-logger.info('Smoke tests complete')
+def multipart_file(field_name, filename, content_type, content):
+    boundary = f"----pawtrack-smoke-{int(time.time() * 1000)}"
+    lines = [
+        f"--{boundary}\r\n".encode("utf-8"),
+        (
+            f'Content-Disposition: form-data; name="{field_name}"; filename="{filename}"\r\n'
+            f"Content-Type: {content_type}\r\n\r\n"
+        ).encode("utf-8"),
+        content,
+        f"\r\n--{boundary}--\r\n".encode("utf-8"),
+    ]
+    return boundary, b"".join(lines)
+
+
+def main():
+    logger.info("Starting PawTrack smoke tests against %s", BASE)
+    suffix = hex(int(time.time() * 1000))[2:]
+    results = []
+
+    user1 = {"username": f"smoke_a_{suffix}", "email": f"smoke_a_{suffix}@example.com", "password": "Password123"}
+    user2 = {"username": f"smoke_b_{suffix}", "email": f"smoke_b_{suffix}@example.com", "password": "Password123"}
+
+    try:
+        results.append(request("GET", "/"))
+        results.append(request("GET", "/openapi.json"))
+        results.append(request("POST", "/usuarios/", body=user1))
+        results.append(request("POST", "/usuarios/", body=user2))
+
+        login_headers = {"Content-Type": "application/x-www-form-urlencoded"}
+        login1 = request("POST", "/login", body=form_body({"username": user1["email"], "password": user1["password"]}), headers=login_headers)
+        login2 = request("POST", "/login", body=form_body({"username": user2["email"], "password": user2["password"]}), headers=login_headers)
+        results.extend([login1, login2])
+
+        token1 = login1["body"]["access_token"]
+        token2 = login2["body"]["access_token"]
+
+        boundary, upload_body = multipart_file("file", "smoke.png", "image/png", TINY_PNG)
+        upload = request(
+            "POST",
+            "/upload",
+            body=upload_body,
+            headers={**auth(token1), "Content-Type": f"multipart/form-data; boundary={boundary}"},
+        )
+        results.append(upload)
+
+        photo_url = upload["body"]["url"]
+        animal_payload = {
+            "especie": "Perro",
+            "color_principal": "Marron",
+            "foto_principal": photo_url,
+            "latitud": 4.711,
+            "longitud": -74.0721,
+            "descripcion": "Smoke test animal near the park",
+        }
+        created_animal = request("POST", "/animales/", body=animal_payload, headers=auth(token1))
+        results.append(created_animal)
+        animal_id = created_animal["body"]["id_animal"]
+
+        results.append(request("GET", "/usuarios/me", headers=auth(token1)))
+        results.append(request("GET", "/animales/"))
+        results.append(request("GET", f"/animales/{animal_id}"))
+
+        sighting_payload = {
+            "latitud": 4.712,
+            "longitud": -74.073,
+            "descripcion": "Smoke test second sighting",
+            "foto_url": photo_url,
+        }
+        sighting = request("POST", f"/animales/{animal_id}/avistamientos", body=sighting_payload, headers=auth(token2))
+        results.append(sighting)
+        sighting_id = sighting["body"]["id_avistamiento"]
+
+        results.append(request("GET", f"/animales/{animal_id}/historial"))
+        results.append(request("GET", f"/avistamientos/{sighting_id}/confirmaciones"))
+        results.append(request("POST", f"/avistamientos/{sighting_id}/confirmar", headers=auth(token1)))
+        results.append(request("GET", f"/avistamientos/{sighting_id}/confirmaciones"))
+        results.append(request("DELETE", f"/avistamientos/{sighting_id}/confirmar", headers=auth(token1)))
+        results.append(request("DELETE", f"/avistamientos/{sighting_id}", headers=auth(token2)))
+
+        logger.info("Smoke tests complete: %s checks passed", len(results))
+    finally:
+        with open(RESULTS_PATH, "w", encoding="utf-8") as file:
+            json.dump([safe_result(result) for result in results], file, indent=2, ensure_ascii=False)
+            file.write("\n")
+        logger.info("Smoke results written to %s", RESULTS_PATH)
+
+
+if __name__ == "__main__":
+    main()

@@ -1,41 +1,38 @@
 const icons = {
-  arrowLeft: "M19 12H5m7-7-7 7 7 7",
-  bell: "M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9m-8 13h4",
-  calendar: "M8 2v4m8-4v4M3 10h18M5 4h14a2 2 0 0 1 2 2v14H3V6a2 2 0 0 1 2-2Z",
-  chevronRight: "m9 18 6-6-6-6",
-  eye: "M2 12s4-7 10-7 10 7 10 7-4 7-10 7S2 12 2 12Zm10 3a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
-  home: "m3 11 9-8 9 8v9H5v-9",
-  lock: "M7 11V7a5 5 0 0 1 10 0v4M6 11h12v10H6V11Z",
-  mail: "M4 6h16v12H4V6Zm0 0 8 7 8-7",
-  map: "M9 18 3 21V6l6-3 6 3 6-3v15l-6 3-6-3Zm0 0V3m6 18V6",
-  mapPin: "M12 21s7-6 7-12a7 7 0 1 0-14 0c0 6 7 12 7 12Zm0-9a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z",
-  menu: "M4 6h16M4 12h16M4 18h16",
-  paw: "M8.5 10.5c1.2 0 2.1 1 2.1 2.2 0 1.5-1 2.8-2.1 2.8s-2.1-1.3-2.1-2.8c0-1.2.9-2.2 2.1-2.2Zm7 0c1.2 0 2.1 1 2.1 2.2 0 1.5-1 2.8-2.1 2.8s-2.1-1.3-2.1-2.8c0-1.2.9-2.2 2.1-2.2ZM6.3 5.2c1 0 1.8.9 1.8 2s-.8 2-1.8 2-1.8-.9-1.8-2 .8-2 1.8-2Zm5.7-1.7c1 0 1.8 1 1.8 2.2S13 8 12 8s-1.8-1-1.8-2.3S11 3.5 12 3.5Zm5.7 1.7c1 0 1.8.9 1.8 2s-.8 2-1.8 2-1.8-.9-1.8-2 .8-2 1.8-2ZM12 13c2.2 0 4.2 1.9 4.2 4 0 1.8-1.4 3-4.2 3s-4.2-1.2-4.2-3c0-2.1 2-4 4.2-4Z",
-  plus: "M12 5v14M5 12h14",
-  search: "M11 19a8 8 0 1 1 5.7-2.3L21 21",
-  settings: "M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0-6v3m0 14v3M4.2 4.2l2.1 2.1m11.4 11.4 2.1 2.1M2 12h3m14 0h3M4.2 19.8l2.1-2.1M17.7 6.3l2.1-2.1",
-  star: "m12 3 2.8 5.7 6.2.9-4.5 4.4 1.1 6.1-5.6-2.9-5.6 2.9 1.1-6.1L3 9.6l6.2-.9L12 3Z",
-  trophy: "M8 4h8v4a4 4 0 0 1-8 0V4Zm0 2H4v2a4 4 0 0 0 4 4m8-6h4v2a4 4 0 0 1-4 4m-4 0v5m-4 3h8",
-  user: "M12 12a5 5 0 1 0 0-10 5 5 0 0 0 0 10Zm8 10a8 8 0 0 0-16 0",
+  arrowLeft: "M6 2h3v3h5v6H9v3H6v-3H2V5h4V2Z",
+  bell: "M6 1h4v2h2v2h1v5h2v2H1v-2h2V5h1V3h2V1Zm0 12h4v2H6v-2Z",
+  calendar: "M3 1h2v2h6V1h2v2h2v12H1V3h2V1Zm0 6v6h10V7H3Zm2 2h2v2H5V9Zm4 0h2v2H9V9Z",
+  camera: "M5 2h6l1 2h3v10H1V4h3l1-2Zm3 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z",
+  chevronRight: "M5 2h4v2h2v2h2v4h-2v2H9v2H5v-3h2V9h2V7H7V5H5V2Z",
+  eye: "M4 3h8v2h2v2h2v2h-2v2h-2v2H4v-2H2V9H0V7h2V5h2V3Zm4 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z",
+  heart: "M2 3h4v2h4V3h4v2h2v5h-2v2h-2v2h-2v2H6v-2H4v-2H2v-2H0V5h2V3Z",
+  home: "M7 1h2v2h2v2h2v2h2v8h-5v-4H6v4H1V7h2V5h2V3h2V1Z",
+  lock: "M5 1h6v2h2v4h2v8H1V7h2V3h2V1Zm0 6h6V4H5v3Zm2 3v3h2v-3H7Z",
+  mail: "M1 3h14v11H1V3Zm2 3v6h10V6l-5 4-5-4Zm1-1 4 3 4-3H4Z",
+  map: "M1 2h3l4 2 4-2h3v12h-3l-4-2-4 2H1V2Zm3 2v8l3-2V6L4 4Zm5 2v4l3 2V4L9 6Z",
+  mapPin: "M5 1h6v2h2v2h2v5h-2v2h-2v2H9v2H7v-2H5v-2H3v-2H1V5h2V3h2V1Zm3 4a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z",
+  menu: "M1 2h14v3H1V2Zm0 5h14v3H1V7Zm0 5h14v3H1v-3Z",
+  paw: "M2 1h3v4H2V1Zm9 0h3v4h-3V1ZM0 6h4v4H0V6Zm12 0h4v4h-4V6Zm-7 4h2V8h2v2h2v2h2v4H3v-4h2v-2Z",
+  plus: "M6 1h4v5h5v4h-5v5H6v-5H1V6h5V1Z",
+  search: "M3 1h7v2h2v2h2v5h-2v2h-2v2H3v-2H1V3h2V1Zm1 3v7h6V9h2V5h-2V3H4v1Zm7 8h3v2h2v2h-4v-2h-1v-2Z",
+  settings: "M6 0h4v2h3v3h3v6h-3v3h-3v2H6v-2H3v-3H0V5h3V2h3V0Zm2 4a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0 3a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z",
+  star: "M6 0h4v4h5v3h-3v3h2v5l-6-3-6 3v-5H0V6h5V4h1V0Z",
+  trophy: "M3 1h10v2h3v6h-3v2h-3v2h3v3H3v-3h3v-2H3V9H0V3h3V1Zm2 2v5h2v2h2V8h2V3H5ZM2 5v2h1V5H2Zm11 0v2h1V5h-1Z",
+  user: "M5 1h6v2h2v6h-2v2H5V9H3V3h2V1Zm1 3v5h4V4H6Zm-2 8h8v2h2v2H2v-2h2v-2Z",
 };
 
-function Icon({ name, size = 22, strokeWidth = 2, className = "" }) {
+function Icon({ name, size = 22, className = "" }) {
   return (
     <svg
       aria-hidden="true"
-      className={`icon ${className}`}
-      fill="none"
+      className={`icon icon-${name} ${className}`}
+      fill="currentColor"
       height={size}
-      viewBox="0 0 24 24"
+      shapeRendering="crispEdges"
+      viewBox="0 0 16 16"
       width={size}
     >
-      <path
-        d={icons[name]}
-        stroke="currentColor"
-        strokeLinecap="square"
-        strokeLinejoin="miter"
-        strokeWidth={strokeWidth + 0.35}
-      />
+      <path d={icons[name]} fillRule="evenodd" />
     </svg>
   );
 }

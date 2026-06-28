@@ -1,0 +1,19 @@
+{
+  "name": "PawTrack",
+  "short_name": "PawTrack",
+  "description": "Registra animales vistos en caminatas y comparte avistamientos con tu comunidad.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "background_color": "#070738",
+  "theme_color": "#070738",
+  "orientation": "portrait",
+  "icons": [
+    {
+      "src": "/favicon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any maskable"
+    }
+  ]
+}
