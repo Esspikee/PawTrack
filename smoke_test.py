@@ -10,6 +10,7 @@ import urllib.request
 logger = logging_config.get_logger(__name__)
 
 BASE = os.getenv("PAWTRACK_API_BASE", "http://127.0.0.1:8000").rstrip("/")
+FRONTEND_ORIGIN = os.getenv("PAWTRACK_FRONTEND_ORIGIN", "http://127.0.0.1:5175").rstrip("/")
 RESULTS_PATH = os.getenv("PAWTRACK_SMOKE_RESULTS", "smoke_test_results.json")
 
 TINY_PNG = base64.b64decode(
@@ -40,10 +41,15 @@ def request(method, path, *, body=None, headers=None, expected=(200,)):
         with urllib.request.urlopen(req, timeout=20) as response:
             raw = response.read().decode("utf-8")
             status = response.status
-            parsed = json.loads(raw) if raw else None
+            response_headers = {key.lower(): value for key, value in response.headers.items()}
+            try:
+                parsed = json.loads(raw) if raw else None
+            except json.JSONDecodeError:
+                parsed = raw
     except urllib.error.HTTPError as error:
         raw = error.read().decode("utf-8")
         status = error.code
+        response_headers = {key.lower(): value for key, value in error.headers.items()}
         try:
             parsed = json.loads(raw)
         except json.JSONDecodeError:
@@ -51,7 +57,14 @@ def request(method, path, *, body=None, headers=None, expected=(200,)):
     except urllib.error.URLError as error:
         raise SmokeFailure(f"Could not reach PawTrack API at {BASE}: {error.reason}") from error
 
-    result = {"method": method, "path": path, "status": status, "body": parsed, "ok": status in expected}
+    result = {
+        "method": method,
+        "path": path,
+        "status": status,
+        "headers": response_headers,
+        "body": parsed,
+        "ok": status in expected,
+    }
     if status not in expected:
         raise SmokeFailure(f"{method} {path} returned {status}; expected {expected}. Body: {parsed}")
     return result
@@ -99,6 +112,7 @@ def multipart_file(field_name, filename, content_type, content):
 
 def main():
     logger.info("Starting PawTrack smoke tests against %s", BASE)
+    logger.info("Checking CORS preflight for frontend origin %s", FRONTEND_ORIGIN)
     suffix = hex(int(time.time() * 1000))[2:]
     results = []
 
@@ -107,6 +121,19 @@ def main():
 
     try:
         results.append(request("GET", "/"))
+        results.append(request("GET", "/health"))
+        cors_preflight = request(
+            "OPTIONS",
+            "/usuarios/",
+            headers={
+                "Origin": FRONTEND_ORIGIN,
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "content-type",
+            },
+        )
+        if cors_preflight["headers"].get("access-control-allow-origin") != FRONTEND_ORIGIN:
+            raise SmokeFailure(f"CORS preflight did not allow {FRONTEND_ORIGIN}")
+        results.append(cors_preflight)
         results.append(request("GET", "/openapi.json"))
         results.append(request("POST", "/usuarios/", body=user1))
         results.append(request("POST", "/usuarios/", body=user2))

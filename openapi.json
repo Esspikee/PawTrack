@@ -22,6 +22,22 @@
         }
       }
     },
+    "/health": {
+      "get": {
+        "summary": "Health",
+        "operationId": "health_health_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      }
+    },
     "/usuarios/me": {
       "get": {
         "summary": "Obtener Perfil Usuario",
@@ -638,7 +654,14 @@
             "title": "Longitud"
           },
           "descripcion": {
-            "type": "string",
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
             "title": "Descripcion"
           }
         },
@@ -647,8 +670,7 @@
           "especie",
           "color_principal",
           "latitud",
-          "longitud",
-          "descripcion"
+          "longitud"
         ],
         "title": "AnimalCreate"
       },

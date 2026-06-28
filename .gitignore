@@ -4,9 +4,13 @@ __pycache__/
 .env
 .pnpm-store/
 smoke_test_results.json
+pawtrack_smoke.db
+pawtrack_ci.db
 
 # Local user-uploaded images are not versioned.
 uploads/
 
 # Configuración local de Claude Code (no se versiona)
 .claude/
+uploads_smoke/
+uploads_ci/

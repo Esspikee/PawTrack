@@ -90,13 +90,12 @@ app.state.limiter = limiter
 app.add_middleware(SlowAPIMiddleware)
 app.add_exception_handler(RateLimitExceeded, lambda request, exc: JSONResponse(status_code=429, content={"detail": "Rate limit exceeded"}))
 
-# 🛡️ 3. Agregamos CORS para que el Frontend (React/Web) pueda conectarse sin bloqueos
+# 3. CORS para que el frontend web pueda conectarse al API.
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], # En una Beta cerrada, permitimos conexión desde cualquier origen
-    # La autenticación es por header Authorization (Bearer JWT), no por cookies,
-    # así que NO necesitamos credenciales. Además, "*" + credentials es una
-    # combinación inválida según la especificación CORS.
+    allow_origins=config.CORS_ALLOWED_ORIGINS,
+    allow_origin_regex=config.CORS_ALLOW_ORIGIN_REGEX,
+    # La autenticacion es por header Authorization (Bearer JWT), no por cookies.
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -247,6 +246,15 @@ def inicio():
 # ==========================================
 # ENDPOINTS DE USUARIOS Y LOGIN
 # ==========================================
+@app.get("/health")
+def health():
+    return {
+        "status": "ok",
+        "environment": config.ENVIRONMENT,
+        "version": config.APP_VERSION,
+    }
+
+
 @app.get("/usuarios/me", response_model=schemas.UsuarioResponse, description="Obtiene el perfil completo del usuario autenticado.")
 def obtener_perfil_usuario(current_user: models.Usuario = Depends(get_current_user)):
     """

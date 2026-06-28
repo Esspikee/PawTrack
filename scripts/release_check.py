@@ -32,7 +32,7 @@ def main():
 
     python = sys.executable
 
-    run([python, "-m", "compileall", "-q", "main.py", "config.py", "database.py", "models.py", "schemas.py", "security.py", "smoke_test.py", "inspect_failure.py", "scripts/export_openapi.py"])
+    run([python, "-m", "compileall", "-q", "main.py", "config.py", "database.py", "models.py", "schemas.py", "security.py", "smoke_test.py", "inspect_failure.py", "scripts/export_openapi.py", "scripts/deployed_readiness_check.py"])
     run([python, "scripts/export_openapi.py"])
     run([python, "-m", "pip", "check"])
 

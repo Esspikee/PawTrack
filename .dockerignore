@@ -1,0 +1,16 @@
+.git
+.venv
+__pycache__
+*.pyc
+.env
+.pnpm-store
+frontend/node_modules
+frontend/dist
+node_modules
+uploads
+uploads_smoke
+uploads_ci
+postgres_data
+pawtrack_smoke.db
+pawtrack_ci.db
+smoke_test_results.json

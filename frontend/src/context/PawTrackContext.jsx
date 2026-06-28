@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
-import { api, clearToken, hasToken, setToken } from "../services/api";
+import { AUTH_TOKEN_CLEARED_EVENT, api, clearToken, hasToken, setToken } from "../services/api";
 import { mapAnimal, mapSighting, mapUser } from "../utils/dataMappers";
 import { PawTrackContext } from "./usePawTrack";
 
@@ -46,6 +46,13 @@ export function PawTrackProvider({ children }) {
       setAuthenticated(true);
       return user;
     } catch (error) {
+      if (error.status === 401) {
+        clearToken();
+        setAuthenticated(false);
+        setCurrentUser(null);
+        setUserError("");
+        return null;
+      }
       setUserError(error.message);
       throw error;
     } finally {
@@ -65,6 +72,18 @@ export function PawTrackProvider({ children }) {
     }
     return undefined;
   }, [authenticated, loadCurrentUser]);
+
+  useEffect(() => {
+    const handleTokenCleared = () => {
+      setAuthenticated(false);
+      setCurrentUser(null);
+      setUserLoading(false);
+      setUserError("");
+    };
+
+    window.addEventListener(AUTH_TOKEN_CLEARED_EVENT, handleTokenCleared);
+    return () => window.removeEventListener(AUTH_TOKEN_CLEARED_EVENT, handleTokenCleared);
+  }, []);
 
   const login = useCallback(async (email, password) => {
     const result = await api.login(email, password);

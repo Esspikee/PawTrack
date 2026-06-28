@@ -2,6 +2,7 @@ const DEFAULT_BASE_URL = "http://127.0.0.1:8000";
 const TOKEN_KEY = "pawtrack_access_token";
 
 export const API_BASE_URL = (import.meta.env.VITE_API_BASE_URL || DEFAULT_BASE_URL).replace(/\/$/, "");
+export const AUTH_TOKEN_CLEARED_EVENT = "pawtrack:auth-token-cleared";
 
 export class ApiError extends Error {
   constructor(message, status = 0, data = null) {
@@ -22,6 +23,7 @@ export function setToken(token) {
 
 export function clearToken() {
   window.localStorage.removeItem(TOKEN_KEY);
+  window.dispatchEvent(new CustomEvent(AUTH_TOKEN_CLEARED_EVENT));
 }
 
 export function hasToken() {
@@ -78,9 +80,6 @@ async function request(path, options = {}) {
   if (!response.ok) {
     if (response.status === 401 && auth) {
       clearToken();
-      if (!window.location.pathname.startsWith("/login")) {
-        window.location.assign("/login");
-      }
     }
 
     throw new ApiError(
