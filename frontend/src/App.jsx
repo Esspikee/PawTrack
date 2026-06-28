@@ -13,6 +13,7 @@ import AnimalHistory from "./pages/AnimalHistory";
 import CreateAnimal from "./pages/CreateAnimal";
 import Profile from "./pages/Profile";
 import ReportSighting from "./pages/ReportSighting";
+import Settings from "./pages/Settings";
 
 function App() {
   return (
@@ -31,6 +32,7 @@ function App() {
       <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
       <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+      <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />
       <Route path="*" element={<Navigate to="/" replace />} />
     </Routes>
   );

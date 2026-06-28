@@ -1,4 +1,4 @@
-import { useNavigate } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 import AppShell from "../components/AppShell";
 import HeartOrnament from "../components/HeartOrnament";
 import Icon from "../components/Icon";
@@ -50,7 +50,11 @@ function Profile() {
         ))}
       </section>
 
-      <button className="menu-card settings-row" onClick={closeSession} type="button">
+      <Link className="menu-card settings-row" to="/settings">
+        <Icon name="settings" /><span><strong>Configuracion</strong><small>Conexion y cuenta</small></span><Icon name="chevronRight" />
+      </Link>
+
+      <button className="menu-card settings-row danger-row" onClick={closeSession} type="button">
         <Icon name="lock" /><span><strong>Cerrar sesion</strong></span><Icon name="chevronRight" />
       </button>
     </AppShell>

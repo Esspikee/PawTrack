@@ -34,6 +34,14 @@ describe("api client", () => {
     expect(options.body.get("password")).toBe("secret");
   });
 
+  it("checks backend health through the deployment health endpoint", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ status: "ok" }));
+
+    await api.health();
+
+    expect(fetchMock.mock.calls[0][0]).toBe("http://127.0.0.1:8000/health");
+  });
+
   it("attaches the bearer token only to protected calls", async () => {
     setToken("token-123");
     const fetchMock = vi.spyOn(globalThis, "fetch").mockResolvedValue(response({ id_usuario: "user-id" }));

@@ -1789,6 +1789,50 @@ textarea::placeholder {
   border-color: var(--cyan);
 }
 
+.settings-summary {
+  color: var(--magenta);
+}
+
+.settings-panel {
+  gap: 10px;
+}
+
+.settings-copy-row {
+  display: grid;
+  gap: 5px;
+  padding: 9px 0;
+  border-bottom: 1px solid rgba(43, 20, 100, 0.9);
+}
+
+.settings-copy-row:last-child {
+  border-bottom: 0;
+}
+
+.settings-copy-row small {
+  color: var(--cyan);
+  font-family: var(--font-display);
+  font-size: 0.5rem;
+  text-transform: uppercase;
+}
+
+.settings-copy-row strong {
+  overflow-wrap: anywhere;
+  color: var(--white);
+  font-size: 0.9rem;
+  line-height: 1.05;
+}
+
+.settings-status-row strong {
+  color: var(--green);
+  font-family: var(--font-display);
+  font-size: 0.58rem;
+}
+
+.danger-row {
+  color: var(--magenta);
+  border-color: var(--magenta);
+}
+
 .bottom-nav {
   position: absolute;
   right: 0;

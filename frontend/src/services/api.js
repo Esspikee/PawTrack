@@ -93,7 +93,7 @@ async function request(path, options = {}) {
 }
 
 export const api = {
-  health: () => request("/"),
+  health: () => request("/health"),
   register: (data) => request("/usuarios/", { method: "POST", body: JSON.stringify(data) }),
   login: (email, password) => {
     const form = new URLSearchParams();
