@@ -10,7 +10,7 @@ import { usePawTrack } from "../context/usePawTrack";
 import { API_BASE_URL, api } from "../services/api";
 
 function Settings() {
-  const { currentUser, logout } = usePawTrack();
+  const { currentUser, locale, logout, setLocale } = usePawTrack();
   const [health, setHealth] = useState(null);
   const [loadingHealth, setLoadingHealth] = useState(true);
   const [healthError, setHealthError] = useState("");
@@ -92,6 +92,33 @@ function Settings() {
         <div className="settings-copy-row">
           <small>Correo</small>
           <strong>{currentUser?.email || "No disponible"}</strong>
+        </div>
+      </section>
+
+      <section className="profile-stats settings-panel">
+        <h2>Idioma</h2>
+        <div className="settings-copy-row">
+          <small>Preferencia</small>
+          <strong>{locale === "en" ? "English" : "Español"}</strong>
+        </div>
+        <p className="settings-note">
+          Disponible en iOS y en navegador. La app guarda el idioma elegido en este dispositivo.
+        </p>
+        <div className="settings-language-grid" role="group" aria-label="Seleccion de idioma">
+          {[
+            { code: "es", label: "Español" },
+            { code: "en", label: "English" },
+            { code: "auto", label: "Auto" },
+          ].map((option) => (
+            <button
+              key={option.code}
+              className={`language-chip ${locale === option.code ? "is-active" : ""}`}
+              onClick={() => setLocale(option.code === "auto" ? window.navigator.language?.slice(0, 2) || "es" : option.code)}
+              type="button"
+            >
+              {option.label}
+            </button>
+          ))}
         </div>
       </section>
 
