@@ -17,7 +17,7 @@ function ReportSighting() {
   const [photoUrl, setPhotoUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
-  const { coordinates, locate, locating, locationError, setCoordinates } = useGeolocation();
+  const { coordinates, locate, locating, locationError, locationHint, setCoordinates } = useGeolocation();
   const navigate = useNavigate();
 
   const selectedAnimalId = selectedAnimalIdInput || animals[0]?.id || "";
@@ -87,10 +87,14 @@ function ReportSighting() {
           <button className="mini-pixel-button" disabled={locating} onClick={locate} type="button">Localizar</button>
         </div>
         {locationError && <p className="form-message warning">{locationError}</p>}
-        <div className="coordinate-grid">
-          <label>Latitud<span className="input-wrap"><input name="latitude" onChange={updateCoordinate} required step="any" type="number" value={coordinates.latitude} /><Icon name="mapPin" size={18} /></span></label>
-          <label>Longitud<span className="input-wrap"><input name="longitude" onChange={updateCoordinate} required step="any" type="number" value={coordinates.longitude} /><Icon name="mapPin" size={18} /></span></label>
-        </div>
+        {!locationError && locationHint && !coordinates.latitude && <p className="form-message info">{locationHint}</p>}
+        <details className="manual-location-fields">
+          <summary>Ubicacion manual</summary>
+          <div className="coordinate-grid">
+            <label>Latitud<span className="input-wrap"><input name="latitude" onChange={updateCoordinate} step="any" type="number" value={coordinates.latitude} /><Icon name="mapPin" size={18} /></span></label>
+            <label>Longitud<span className="input-wrap"><input name="longitude" onChange={updateCoordinate} step="any" type="number" value={coordinates.longitude} /><Icon name="mapPin" size={18} /></span></label>
+          </div>
+        </details>
 
         <label>
           Descripcion opcional

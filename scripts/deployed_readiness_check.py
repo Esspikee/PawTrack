@@ -1,5 +1,6 @@
 import argparse
 import json
+from urllib.parse import urlparse
 import urllib.error
 import urllib.request
 
@@ -35,7 +36,9 @@ def main():
 
     api_base = normalize_url(args.api_base)
     frontend_origin = normalize_url(args.frontend_origin)
+    frontend_scheme = urlparse(frontend_origin).scheme
 
+    assert_ok(frontend_scheme == "https", f"frontend origin uses HTTPS for browser geolocation ({frontend_origin})")
     status, headers, body = request(f"{api_base}/health")
     assert_ok(status == 200, f"backend /health responded with HTTP 200 (got {status})")
     try:
@@ -59,9 +62,14 @@ def main():
         f"CORS allows frontend origin {frontend_origin}",
     )
 
-    status, _, body = request(frontend_origin)
+    status, frontend_headers, body = request(frontend_origin)
     assert_ok(status == 200, f"frontend responded with HTTP 200 (got {status})")
     assert_ok("PawTrack" in body, "frontend HTML contains PawTrack")
+    permissions_policy = frontend_headers.get("permissions-policy", "")
+    assert_ok(
+        "geolocation=()" not in permissions_policy.replace(" ", ""),
+        "frontend Permissions-Policy does not block geolocation",
+    )
 
     print("Deployed readiness checks completed.")
 

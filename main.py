@@ -7,6 +7,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from jose import JWTError, jwt
@@ -59,12 +60,26 @@ def seed_niveles() -> None:
         db.close()
 
 
+def ensure_optional_animal_name_column() -> None:
+    """Adds animales.nombre for existing databases created before this feature."""
+    inspector = inspect(engine)
+    columns = {column["name"] for column in inspector.get_columns("animales")}
+    if "nombre" in columns:
+        return
+
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE animales ADD COLUMN nombre VARCHAR(80)"))
+    logger.info("Database migrated | added animales.nombre")
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # --- startup ---
     # 1. Construir las tablas si no existen (gestionado por los modelos SQLAlchemy).
     models.Base.metadata.create_all(bind=engine)
-    # 2. Sembrar los niveles base (idempotente).
+    # 2. Aplicar migraciones ligeras para bases existentes.
+    ensure_optional_animal_name_column()
+    # 3. Sembrar los niveles base (idempotente).
     seed_niveles()
     logger.info(
         "PawTrack backend started successfully | environment=%s | db_configured=%s | version=%s",
@@ -452,6 +467,7 @@ def registrar_nuevo_animal(
     # 1. Crear Animal
     nuevo_animal = models.Animal(
         id_descubridor=current_user.id_usuario,
+        nombre=datos.nombre.strip() if datos.nombre else None,
         especie=datos.especie,
         color_principal=datos.color_principal,
         foto_principal=datos.foto_principal,
@@ -484,8 +500,9 @@ def registrar_nuevo_animal(
     db.refresh(nuevo_animal)
 
     logger.info(
-        "Animal created | animal_id=%s | especie=%s",
+        "Animal created | animal_id=%s | nombre=%s | especie=%s",
         nuevo_animal.id_animal,
+        nuevo_animal.nombre,
         nuevo_animal.especie,
     )
     return nuevo_animal
@@ -503,6 +520,7 @@ def actualizar_animal(
     if str(animal_db.id_descubridor) != str(current_user.id_usuario):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permisos para modificar el perfil de este animal.")
 
+    animal_db.nombre = animal_actualizado.nombre.strip() if animal_actualizado.nombre else None
     animal_db.especie = animal_actualizado.especie
     animal_db.color_principal = animal_actualizado.color_principal
     animal_db.foto_principal = animal_actualizado.foto_principal

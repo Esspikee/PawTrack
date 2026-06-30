@@ -89,6 +89,7 @@ describe("api client", () => {
     const animalId = "animal-uuid";
     const sightingId = "sighting-uuid";
     const animalPayload = {
+      nombre: "Milo",
       especie: "Gato",
       color_principal: "Negro",
       latitud: 4.711,

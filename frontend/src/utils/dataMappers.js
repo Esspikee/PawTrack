@@ -13,6 +13,9 @@ const nextLevelAt = { 1: 10, 2: 50, 3: 150, 4: 500 };
 const timezonePattern = /(Z|[+-]\d{2}:?\d{2})$/;
 
 export function animalTitle(animal) {
+  const customName = (animal?.nombre ?? animal?.customName ?? "").trim();
+  if (customName) return customName;
+
   const species = animal?.especie ?? animal?.species ?? "Animal";
   const color = animal?.color_principal ?? animal?.color ?? "Sin color";
   return `${species} · ${color}`;
@@ -102,6 +105,7 @@ export function mapAnimal(raw) {
   return {
     id: raw.id_animal,
     name: animalTitle(raw),
+    customName: raw.nombre ?? "",
     species,
     breed: color,
     color,

@@ -3,6 +3,7 @@ import { animalTitle, formatCoordinates, formatRelativeTime, mapAnimal, mapSight
 
 const animalResponse = {
   id_animal: "11111111-1111-1111-1111-111111111111",
+  nombre: null,
   especie: "Gato",
   color_principal: "Negro",
   foto_principal: "/uploads/cat.jpg",
@@ -32,6 +33,14 @@ describe("backend data mappers", () => {
   it("uses Especie · Color as the animal title everywhere", () => {
     expect(animalTitle(animalResponse)).toBe("Gato · Negro");
     expect(mapAnimal(animalResponse).name).toBe("Gato · Negro");
+  });
+
+  it("prefers a custom animal name when one exists", () => {
+    expect(animalTitle({ ...animalResponse, nombre: "Milo" })).toBe("Milo");
+    expect(mapAnimal({ ...animalResponse, nombre: "Milo" })).toMatchObject({
+      customName: "Milo",
+      name: "Milo",
+    });
   });
 
   it("maps UUID, coordinates, image and sightings without mock-only fields", () => {

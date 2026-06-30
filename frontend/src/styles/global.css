@@ -1266,6 +1266,22 @@ option {
   justify-self: center;
 }
 
+.password-toggle {
+  width: 100%;
+  height: 100%;
+  display: grid;
+  place-items: center;
+  border: 0;
+  border-left: 1px solid rgba(49, 94, 208, 0.7);
+  color: var(--cream);
+  background: rgba(43, 20, 100, 0.28);
+}
+
+.password-toggle:focus-visible {
+  outline: 2px solid var(--cyan);
+  outline-offset: -2px;
+}
+
 textarea {
   min-height: 104px;
   resize: vertical;
@@ -2112,6 +2128,11 @@ textarea::placeholder {
   color: var(--cream);
 }
 
+.form-message.info {
+  border-color: rgba(46, 247, 255, 0.72);
+  color: var(--cyan);
+}
+
 .pixel-button:disabled,
 .mini-pixel-button:disabled,
 .capture-control:has(input:disabled) {
@@ -2377,6 +2398,30 @@ textarea::placeholder {
 .coordinate-grid input {
   padding-inline: 7px;
   font-size: 0.82rem;
+}
+
+.manual-location-fields {
+  display: grid;
+  gap: 8px;
+  color: var(--cyan);
+}
+
+.manual-location-fields summary {
+  width: fit-content;
+  padding: 0;
+  border: 0;
+  color: var(--cyan);
+  background: transparent;
+  font-family: var(--font-display);
+  font-size: 0.52rem;
+  text-transform: uppercase;
+  cursor: pointer;
+}
+
+.manual-location-fields[open] {
+  padding: 8px;
+  border: 1px solid rgba(46, 247, 255, 0.36);
+  background: rgba(7, 7, 56, 0.44);
 }
 
 .detail-photo {

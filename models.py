@@ -87,6 +87,7 @@ class Animal(Base):
     
     id_animal = Column(GUID(), primary_key=True, default=uuid.uuid4)
     id_descubridor = Column(GUID(), ForeignKey("usuarios.id_usuario"), nullable=False)
+    nombre = Column(String(80), nullable=True)
     especie = Column(SQLEnum(EspeciePermitida), nullable=False)
     color_principal = Column(String(50), nullable=False)
     foto_principal = Column(String(255), nullable=True)

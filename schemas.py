@@ -106,6 +106,7 @@ class AvistamientoResponse(AvistamientoBase):
 # ESQUEMAS DE ANIMAL (INDIVIDUO)
 # ==========================================
 class AnimalCreate(BaseModel):
+    nombre: Optional[str] = None
     especie: EspeciePermitida
     color_principal: str
     foto_principal: Optional[str] = None
@@ -116,12 +117,14 @@ class AnimalCreate(BaseModel):
     descripcion: Optional[str] = None
 
 class AnimalUpdate(BaseModel):
+    nombre: Optional[str] = None
     especie: EspeciePermitida
     color_principal: str
     foto_principal: Optional[str] = None
 
 class AnimalResponse(BaseModel):
     id_animal: uuid.UUID
+    nombre: Optional[str] = None
     especie: EspeciePermitida
     color_principal: str
     foto_principal: Optional[str] = None
