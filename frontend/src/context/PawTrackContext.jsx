@@ -1,16 +1,21 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AUTH_TOKEN_CLEARED_EVENT, api, clearToken, hasToken, setToken } from "../services/api";
-import { mapAnimal, mapSighting, mapUser } from "../utils/dataMappers";
+import { mapAchievementsResponse, mapAnimal, mapSighting, mapUser } from "../utils/dataMappers";
 import { PawTrackContext } from "./usePawTrack";
 
 export function PawTrackProvider({ children }) {
   const [animals, setAnimals] = useState([]);
+  const [achievements, setAchievements] = useState([]);
+  const [achievementPoints, setAchievementPoints] = useState(0);
+  const [recentAchievement, setRecentAchievement] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [authenticated, setAuthenticated] = useState(hasToken());
   const [animalsLoading, setAnimalsLoading] = useState(true);
   const [userLoading, setUserLoading] = useState(hasToken());
   const [animalsError, setAnimalsError] = useState("");
   const [userError, setUserError] = useState("");
+  const achievementsRef = useRef([]);
+  const achievementToastTimer = useRef(null);
   const [locale, setLocale] = useState(() => {
     if (typeof window === "undefined") {
       return "es";
@@ -66,6 +71,51 @@ export function PawTrackProvider({ children }) {
     }
   }, []);
 
+  const clearRecentAchievement = useCallback(() => {
+    if (achievementToastTimer.current) {
+      window.clearTimeout(achievementToastTimer.current);
+      achievementToastTimer.current = null;
+    }
+    setRecentAchievement(null);
+  }, []);
+
+  const showAchievementToast = useCallback((achievement) => {
+    if (achievementToastTimer.current) {
+      window.clearTimeout(achievementToastTimer.current);
+    }
+    setRecentAchievement(achievement);
+    achievementToastTimer.current = window.setTimeout(() => {
+      setRecentAchievement(null);
+      achievementToastTimer.current = null;
+    }, 6500);
+  }, []);
+
+  const loadAchievements = useCallback(async ({ notify = false } = {}) => {
+    if (!hasToken()) {
+      achievementsRef.current = [];
+      setAchievements([]);
+      setAchievementPoints(0);
+      return { achievementPoints: 0, achievements: [] };
+    }
+
+    const mapped = mapAchievementsResponse(await api.listAchievements());
+    const previous = achievementsRef.current;
+    if (notify && previous.length > 0) {
+      const unlocked = mapped.achievements.find((achievement) => {
+        const previousAchievement = previous.find((item) => item.id === achievement.id);
+        return achievement.completed && previousAchievement && !previousAchievement.completed;
+      });
+      if (unlocked) {
+        showAchievementToast(unlocked);
+      }
+    }
+
+    achievementsRef.current = mapped.achievements;
+    setAchievementPoints(mapped.achievementPoints);
+    setAchievements(mapped.achievements);
+    return mapped;
+  }, [showAchievementToast]);
+
   useEffect(() => {
     const timer = window.setTimeout(() => loadAnimals().catch(() => {}), 0);
     return () => window.clearTimeout(timer);
@@ -73,23 +123,30 @@ export function PawTrackProvider({ children }) {
 
   useEffect(() => {
     if (authenticated) {
-      const timer = window.setTimeout(() => loadCurrentUser().catch(() => {}), 0);
+      const timer = window.setTimeout(() => {
+        loadCurrentUser().catch(() => {});
+        loadAchievements().catch(() => {});
+      }, 0);
       return () => window.clearTimeout(timer);
     }
     return undefined;
-  }, [authenticated, loadCurrentUser]);
+  }, [authenticated, loadAchievements, loadCurrentUser]);
 
   useEffect(() => {
     const handleTokenCleared = () => {
       setAuthenticated(false);
+      achievementsRef.current = [];
+      setAchievements([]);
+      setAchievementPoints(0);
       setCurrentUser(null);
+      clearRecentAchievement();
       setUserLoading(false);
       setUserError("");
     };
 
     window.addEventListener(AUTH_TOKEN_CLEARED_EVENT, handleTokenCleared);
     return () => window.removeEventListener(AUTH_TOKEN_CLEARED_EVENT, handleTokenCleared);
-  }, []);
+  }, [clearRecentAchievement]);
 
   useEffect(() => {
     if (typeof document !== "undefined") {
@@ -112,21 +169,25 @@ export function PawTrackProvider({ children }) {
   const logout = useCallback(() => {
     clearToken();
     setAuthenticated(false);
+    achievementsRef.current = [];
+    setAchievements([]);
+    setAchievementPoints(0);
     setCurrentUser(null);
-  }, []);
+    clearRecentAchievement();
+  }, [clearRecentAchievement]);
 
   const createAnimal = useCallback(async (payload) => {
     const animal = mapAnimal(await api.createAnimal(payload));
     setAnimals((items) => [animal, ...items.filter((item) => item.id !== animal.id)]);
-    await loadCurrentUser();
+    await Promise.all([loadCurrentUser(), loadAchievements({ notify: true })]);
     return animal;
-  }, [loadCurrentUser]);
+  }, [loadAchievements, loadCurrentUser]);
 
   const addSighting = useCallback(async (animalId, payload) => {
     const sighting = mapSighting(await api.addSighting(animalId, payload));
-    await Promise.all([loadAnimals(), loadCurrentUser()]);
+    await Promise.all([loadAnimals(), loadCurrentUser(), loadAchievements({ notify: true })]);
     return sighting;
-  }, [loadAnimals, loadCurrentUser]);
+  }, [loadAchievements, loadAnimals, loadCurrentUser]);
 
   const loadAnimalDetail = useCallback(async (animalId) => mapAnimal(await api.getAnimal(animalId)), []);
 
@@ -137,18 +198,23 @@ export function PawTrackProvider({ children }) {
 
   const value = useMemo(() => ({
     addSighting,
+    achievementPoints,
+    achievements,
     animals,
     animalsError,
     animalsLoading,
     authenticated,
+    clearRecentAchievement,
     createAnimal,
     currentUser,
+    loadAchievements,
     loadAnimalDetail,
     loadAnimals,
     loadCurrentUser,
     loadHistory,
     login,
     logout,
+    recentAchievement,
     register,
     locale,
     setLocale,
@@ -156,18 +222,23 @@ export function PawTrackProvider({ children }) {
     userLoading,
   }), [
     addSighting,
+    achievementPoints,
+    achievements,
     animals,
     animalsError,
     animalsLoading,
     authenticated,
+    clearRecentAchievement,
     createAnimal,
     currentUser,
+    loadAchievements,
     loadAnimalDetail,
     loadAnimals,
     loadCurrentUser,
     loadHistory,
     login,
     logout,
+    recentAchievement,
     register,
     locale,
     setLocale,

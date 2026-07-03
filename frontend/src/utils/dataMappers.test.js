@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from "vitest";
-import { animalTitle, formatCoordinates, formatRelativeTime, mapAnimal, mapSighting, mapUser } from "./dataMappers";
+import { animalTitle, formatCoordinates, formatRelativeTime, mapAchievementsResponse, mapAnimal, mapSighting, mapUser } from "./dataMappers";
 
 const animalResponse = {
   id_animal: "11111111-1111-1111-1111-111111111111",
@@ -60,6 +60,7 @@ describe("backend data mappers", () => {
       username: "laura",
       email: "laura@example.com",
       puntos_totales: 35,
+      puntos_logros: 5,
       nivel_actual: 2,
       animales_descubiertos: 4,
       avistamientos_realizados: 12,
@@ -71,10 +72,39 @@ describe("backend data mappers", () => {
     expect(user).toMatchObject({
       animalsDiscovered: 4,
       confirmations: 8,
+      achievementPoints: 5,
       level: 2,
       points: 35,
       sightings: 12,
     });
+  });
+
+  it("maps achievement points and husky achievement progress", () => {
+    const mapped = mapAchievementsResponse({
+      puntos_logros: 5,
+      logros: [{
+        clave: "three_huskies",
+        titulo: "Manada husky",
+        descripcion: "Registra 3 perros husky.",
+        icono: "trophy",
+        puntos: 5,
+        objetivo: 3,
+        progreso: 2,
+        completado: false,
+        fecha_desbloqueo: null,
+      }],
+    });
+
+    expect(mapped.achievementPoints).toBe(5);
+    expect(mapped.achievements[0]).toMatchObject({
+      completed: false,
+      current: 2,
+      goal: 3,
+      id: "three_huskies",
+      points: 5,
+      value: "2/3",
+    });
+    expect(mapped.achievements[0].progress).toBeCloseTo(66.66, 1);
   });
 
   it("formats coordinates defensively", () => {

@@ -1386,7 +1386,7 @@ textarea::placeholder {
 
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
+  grid-template-columns: repeat(2, 1fr);
   gap: 8px;
 }
 
@@ -1410,6 +1410,10 @@ textarea::placeholder {
 
 .stat-card:nth-child(3) {
   color: var(--cyan);
+}
+
+.stat-card:nth-child(4) {
+  color: var(--green);
 }
 
 .stat-card strong {
@@ -1773,6 +1777,16 @@ textarea::placeholder {
   border-bottom: 0;
 }
 
+.achievement-row.completed {
+  border-color: rgba(245, 200, 76, 0.35);
+  color: var(--gold);
+}
+
+.achievement-row.completed > .icon {
+  color: var(--gold);
+  filter: drop-shadow(0 0 5px rgba(245, 200, 76, 0.64));
+}
+
 .achievement-row span {
   min-width: 0;
   display: grid;
@@ -1799,6 +1813,130 @@ textarea::placeholder {
   font-size: 0.48rem;
   font-style: normal;
   font-weight: 900;
+}
+
+.achievement-toast {
+  position: absolute;
+  top: 14px;
+  right: 10px;
+  left: 10px;
+  z-index: 20;
+  min-height: 78px;
+  display: grid;
+  grid-template-columns: 42px 1fr 24px;
+  align-items: center;
+  gap: 10px;
+  padding: 10px;
+  border: 2px solid var(--gold);
+  color: var(--cream);
+  background:
+    linear-gradient(90deg, rgba(255, 89, 209, 0.14) 0 2px, transparent 2px calc(100% - 2px), rgba(46, 247, 255, 0.16) calc(100% - 2px)),
+    rgba(7, 7, 56, 0.98);
+  box-shadow:
+    inset 0 0 0 1px rgba(46, 247, 255, 0.32),
+    0 4px 0 rgba(0, 0, 0, 0.56),
+    0 0 18px rgba(245, 200, 76, 0.28);
+  animation: achievement-toast-in 420ms steps(5, end), achievement-toast-idle 1.6s steps(2, end) infinite 420ms;
+}
+
+.achievement-toast::before,
+.achievement-toast::after {
+  position: absolute;
+  width: 18px;
+  height: 14px;
+  background:
+    linear-gradient(var(--magenta), var(--magenta)) 0 0 / 12px 2px no-repeat,
+    linear-gradient(var(--magenta), var(--magenta)) 0 0 / 2px 10px no-repeat,
+    linear-gradient(var(--cyan), var(--cyan)) 7px 8px / 11px 2px no-repeat;
+  content: "";
+}
+
+.achievement-toast::before {
+  top: -6px;
+  left: 8px;
+}
+
+.achievement-toast::after {
+  right: 8px;
+  bottom: -6px;
+  transform: rotate(180deg);
+}
+
+.achievement-toast-icon {
+  width: 40px;
+  height: 40px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--cyan);
+  color: var(--gold);
+  background: rgba(10, 16, 56, 0.92);
+  box-shadow: inset 0 0 0 2px rgba(43, 20, 100, 0.86);
+}
+
+.achievement-toast span {
+  min-width: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.achievement-toast small,
+.achievement-toast strong,
+.achievement-toast em {
+  font-family: var(--font-display);
+  font-style: normal;
+  letter-spacing: 0;
+  text-transform: uppercase;
+}
+
+.achievement-toast small {
+  color: var(--cyan);
+  font-size: 0.46rem;
+}
+
+.achievement-toast strong {
+  overflow-wrap: anywhere;
+  color: var(--white);
+  font-size: 0.58rem;
+}
+
+.achievement-toast em {
+  color: var(--gold);
+  font-size: 0.48rem;
+}
+
+.achievement-toast button {
+  width: 22px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border: 1px solid var(--magenta);
+  color: var(--magenta);
+  background: rgba(7, 7, 56, 0.9);
+  font-family: var(--font-display);
+  font-size: 0.54rem;
+  line-height: 1;
+  text-transform: uppercase;
+}
+
+@keyframes achievement-toast-in {
+  from {
+    opacity: 0;
+    transform: translateY(-22px) scale(0.96);
+  }
+
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes achievement-toast-idle {
+  50% {
+    box-shadow:
+      inset 0 0 0 1px rgba(46, 247, 255, 0.42),
+      0 4px 0 rgba(0, 0, 0, 0.56),
+      0 0 24px rgba(245, 200, 76, 0.38);
+  }
 }
 
 .settings-row {

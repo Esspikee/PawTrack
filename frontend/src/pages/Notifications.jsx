@@ -29,7 +29,7 @@ function Notifications() {
         <Icon name="bell" />
         <span>
           <strong>Radar PawTrack</strong>
-          <small>{currentUser ? `${currentUser.points} puntos acumulados` : "Actividad comunitaria"}</small>
+          <small>{currentUser ? `${currentUser.points} XP acumulada` : "Actividad comunitaria"}</small>
         </span>
       </section>
 

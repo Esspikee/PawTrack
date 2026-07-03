@@ -61,6 +61,7 @@ class Usuario(Base):
     email = Column(String(100), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
     puntos_totales = Column(Integer, default=0)
+    puntos_logros = Column(Integer, default=0, nullable=False)
     nivel_actual = Column(Integer, ForeignKey("niveles.nivel"), default=1)
     fecha_creacion = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
 
@@ -68,6 +69,7 @@ class Usuario(Base):
     animales_descubiertos_rel = relationship("Animal", back_populates="descubridor")
     avistamientos_realizados_rel = relationship("Avistamiento", back_populates="usuario")
     confirmaciones_realizadas_rel = relationship("Confirmacion", back_populates="usuario")
+    logros_rel = relationship("LogroUsuario", back_populates="usuario", cascade="all, delete-orphan")
 
     # Propiedades dinámicas para el perfil de usuario
     @property
@@ -106,6 +108,22 @@ class Animal(Base):
     def cantidad_confirmaciones(self):
         """Suma las confirmaciones de todos los avistamientos de este animal"""
         return sum(len(a.confirmaciones) for a in self.avistamientos)
+
+
+class LogroUsuario(Base):
+    __tablename__ = "logros_usuarios"
+
+    id_logro_usuario = Column(GUID(), primary_key=True, default=uuid.uuid4)
+    id_usuario = Column(GUID(), ForeignKey("usuarios.id_usuario"), nullable=False)
+    clave_logro = Column(String(80), nullable=False)
+    puntos_otorgados = Column(Integer, nullable=False, default=0)
+    fecha_desbloqueo = Column(DateTime(timezone=True), default=lambda: datetime.now(timezone.utc))
+
+    usuario = relationship("Usuario", back_populates="logros_rel")
+
+    __table_args__ = (
+        UniqueConstraint("id_usuario", "clave_logro", name="_usuario_logro_uc"),
+    )
 
 class Avistamiento(Base):
     __tablename__ = "avistamientos"

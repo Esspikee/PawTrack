@@ -127,6 +127,33 @@ export function mapAnimal(raw) {
   };
 }
 
+export function mapAchievement(raw) {
+  const goal = raw.objetivo ?? 1;
+  const progress = Math.max(0, Math.min(goal, raw.progreso ?? 0));
+
+  return {
+    id: raw.clave,
+    icon: raw.icono || "trophy",
+    label: raw.titulo,
+    detail: raw.descripcion,
+    points: raw.puntos ?? 0,
+    goal,
+    current: progress,
+    progress: goal > 0 ? Math.min(100, (progress / goal) * 100) : 100,
+    completed: Boolean(raw.completado),
+    unlockedAt: raw.fecha_desbloqueo ?? null,
+    value: `${progress}/${goal}`,
+    raw,
+  };
+}
+
+export function mapAchievementsResponse(raw) {
+  return {
+    achievementPoints: raw?.puntos_logros ?? 0,
+    achievements: (raw?.logros ?? []).map(mapAchievement),
+  };
+}
+
 export function mapUser(raw) {
   if (!raw) return null;
   const level = raw.nivel_actual ?? 1;
@@ -140,6 +167,7 @@ export function mapUser(raw) {
     username: raw.username,
     email: raw.email,
     points,
+    achievementPoints: raw.puntos_logros ?? 0,
     level,
     rank: rankByLevel[level] ?? "Explorador",
     xpProgress: progress,

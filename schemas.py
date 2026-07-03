@@ -26,6 +26,7 @@ class UsuarioPublico(BaseModel):
     id_usuario: uuid.UUID
     username: str
     puntos_totales: int
+    puntos_logros: int
     nivel_actual: int
     fecha_creacion: datetime
     animales_descubiertos: int
@@ -55,6 +56,7 @@ class UsuarioCreate(UsuarioBase):
 class UsuarioResponse(UsuarioBase):
     id_usuario: uuid.UUID
     puntos_totales: int
+    puntos_logros: int
     nivel_actual: int
     fecha_creacion: datetime
     animales_descubiertos: int
@@ -63,6 +65,23 @@ class UsuarioResponse(UsuarioBase):
 
     class Config:
         from_attributes = True
+
+
+class LogroResponse(BaseModel):
+    clave: str
+    titulo: str
+    descripcion: str
+    icono: str
+    puntos: int
+    objetivo: int
+    progreso: int
+    completado: bool
+    fecha_desbloqueo: Optional[datetime] = None
+
+
+class LogrosUsuarioResponse(BaseModel):
+    puntos_logros: int
+    logros: List[LogroResponse]
 
 # ==========================================
 # ESQUEMAS DE CONFIRMACIÓN

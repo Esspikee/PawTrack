@@ -106,6 +106,7 @@ export const api = {
     });
   },
   getMe: () => request("/usuarios/me", { auth: true }),
+  listAchievements: () => request("/usuarios/me/logros", { auth: true }),
   listUsers: () => request("/usuarios/"),
   uploadImage: (file) => {
     const form = new FormData();
