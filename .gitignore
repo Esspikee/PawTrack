@@ -1,4 +1,5 @@
 .venv/
+.venv-wsl/
 __pycache__/
 *.pyc
 .env
@@ -6,6 +7,7 @@ __pycache__/
 smoke_test_results.json
 pawtrack_smoke.db
 pawtrack_ci.db
+pawtrack_local.db
 
 # Local user-uploaded images are not versioned.
 uploads/
@@ -14,3 +16,6 @@ uploads/
 .claude/
 uploads_smoke/
 uploads_ci/
+
+# Cloudflare local development output
+frontend/.wrangler/

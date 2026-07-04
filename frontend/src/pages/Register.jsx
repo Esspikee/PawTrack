@@ -9,6 +9,7 @@ const initialForm = { username: "", email: "", password: "", confirmPassword: ""
 
 function Register() {
   const [form, setForm] = useState(initialForm);
+  const [visiblePasswords, setVisiblePasswords] = useState({ password: false, confirmPassword: false });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const { register } = usePawTrack();
@@ -17,6 +18,10 @@ function Register() {
   const updateField = (event) => {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
+  };
+
+  const togglePassword = (field) => {
+    setVisiblePasswords((current) => ({ ...current, [field]: !current[field] }));
   };
 
   const handleSubmit = async (event) => {
@@ -74,16 +79,30 @@ function Register() {
           <label>
             Contrasena
             <span className="input-wrap">
-              <input autoComplete="new-password" name="password" onChange={updateField} placeholder="********" required type="password" value={form.password} />
-              <Icon name="eye" size={20} />
+              <input autoComplete="new-password" name="password" onChange={updateField} placeholder="********" required type={visiblePasswords.password ? "text" : "password"} value={form.password} />
+              <button
+                aria-label={visiblePasswords.password ? "Ocultar contrasena" : "Mostrar contrasena"}
+                className="password-toggle"
+                onClick={() => togglePassword("password")}
+                type="button"
+              >
+                <Icon name="eye" size={20} />
+              </button>
             </span>
           </label>
 
           <label>
             Confirmar contrasena
             <span className="input-wrap">
-              <input autoComplete="new-password" name="confirmPassword" onChange={updateField} placeholder="********" required type="password" value={form.confirmPassword} />
-              <Icon name="eye" size={20} />
+              <input autoComplete="new-password" name="confirmPassword" onChange={updateField} placeholder="********" required type={visiblePasswords.confirmPassword ? "text" : "password"} value={form.confirmPassword} />
+              <button
+                aria-label={visiblePasswords.confirmPassword ? "Ocultar confirmacion de contrasena" : "Mostrar confirmacion de contrasena"}
+                className="password-toggle"
+                onClick={() => togglePassword("confirmPassword")}
+                type="button"
+              >
+                <Icon name="eye" size={20} />
+              </button>
             </span>
           </label>
 

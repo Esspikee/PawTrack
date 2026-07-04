@@ -8,14 +8,14 @@ import TopBar from "../components/TopBar";
 import { usePawTrack } from "../context/usePawTrack";
 import { useGeolocation } from "../hooks/useGeolocation";
 
-const initialForm = { species: "Perro", color: "", description: "" };
+const initialForm = { name: "", species: "Perro", color: "", description: "" };
 
 function CreateAnimal() {
   const [form, setForm] = useState(initialForm);
   const [photoUrl, setPhotoUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
-  const { coordinates, locate, locating, locationError, setCoordinates } = useGeolocation();
+  const { coordinates, locate, locating, locationError, locationHint, setCoordinates } = useGeolocation();
   const { createAnimal } = usePawTrack();
   const navigate = useNavigate();
 
@@ -48,6 +48,7 @@ function CreateAnimal() {
     setSubmitting(true);
     try {
       const animal = await createAnimal({
+        nombre: form.name.trim() || null,
         especie: form.species,
         color_principal: form.color.trim(),
         latitud: latitude,
@@ -81,6 +82,7 @@ function CreateAnimal() {
           </button>
         </div>
         {locationError && <p className="form-message warning">{locationError}</p>}
+        {!locationError && locationHint && !coordinates.latitude && <p className="form-message info">{locationHint}</p>}
         <div className="coordinate-grid">
           <label>
             Latitud
@@ -93,6 +95,14 @@ function CreateAnimal() {
         </div>
 
         <div className="form-section-title"><Icon name="paw" size={20} /><span>3. Datos rapidos</span></div>
+        <label>
+          Nombre opcional
+          <span className="input-wrap">
+            <input name="name" onChange={updateField} placeholder="Buddy, Luna, Max..." type="text" value={form.name} />
+            <Icon name="paw" size={20} />
+          </span>
+        </label>
+
         <label>
           Especie
           <span className="input-wrap">

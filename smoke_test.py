@@ -157,6 +157,7 @@ def main():
 
         photo_url = upload["body"]["url"]
         animal_payload = {
+            "nombre": "Smoke Buddy",
             "especie": "Perro",
             "color_principal": "Marron",
             "foto_principal": photo_url,

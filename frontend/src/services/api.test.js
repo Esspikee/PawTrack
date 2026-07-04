@@ -89,6 +89,7 @@ describe("api client", () => {
     const animalId = "animal-uuid";
     const sightingId = "sighting-uuid";
     const animalPayload = {
+      nombre: "Milo",
       especie: "Gato",
       color_principal: "Negro",
       latitud: 4.711,
@@ -104,6 +105,7 @@ describe("api client", () => {
     };
 
     await api.listAnimals();
+    await api.listAchievements();
     await api.getAnimal(animalId);
     await api.createAnimal(animalPayload);
     await api.addSighting(animalId, sightingPayload);
@@ -122,6 +124,7 @@ describe("api client", () => {
 
     expect(calls).toMatchObject([
       { method: "GET", url: "http://127.0.0.1:8000/animales/" },
+      { auth: "Bearer token-123", method: "GET", url: "http://127.0.0.1:8000/usuarios/me/logros" },
       { method: "GET", url: `http://127.0.0.1:8000/animales/${animalId}` },
       { auth: "Bearer token-123", method: "POST", url: "http://127.0.0.1:8000/animales/" },
       { auth: "Bearer token-123", method: "POST", url: `http://127.0.0.1:8000/animales/${animalId}/avistamientos` },
@@ -131,7 +134,7 @@ describe("api client", () => {
       { method: "GET", url: `http://127.0.0.1:8000/avistamientos/${sightingId}/confirmaciones` },
       { auth: "Bearer token-123", method: "DELETE", url: `http://127.0.0.1:8000/avistamientos/${sightingId}` },
     ]);
-    expect(JSON.parse(calls[2].body)).toEqual(animalPayload);
-    expect(JSON.parse(calls[3].body)).toEqual(sightingPayload);
+    expect(JSON.parse(calls[3].body)).toEqual(animalPayload);
+    expect(JSON.parse(calls[4].body)).toEqual(sightingPayload);
   });
 });

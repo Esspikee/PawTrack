@@ -7,6 +7,7 @@ from slowapi import Limiter
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 from slowapi.middleware import SlowAPIMiddleware
+from sqlalchemy import inspect, text
 from sqlalchemy.orm import Session
 from sqlalchemy.exc import IntegrityError
 from jose import JWTError, jwt
@@ -17,6 +18,7 @@ from uuid import uuid4
 from contextlib import asynccontextmanager
 
 # Importaciones locales
+from achievements import ACHIEVEMENT_CATEGORIES, ACHIEVEMENT_RARITIES, evaluate_user_achievements
 from database import engine, SessionLocal
 import models, schemas, security, config, logging_config
 
@@ -35,7 +37,6 @@ NIVELES_SEED = [
     (4, "Héroe", 150),
     (5, "Leyenda", 500),
 ]
-
 
 def seed_niveles() -> None:
     """Inserta los niveles base de forma idempotente (no duplica si ya existen)."""
@@ -59,12 +60,39 @@ def seed_niveles() -> None:
         db.close()
 
 
+def ensure_optional_animal_name_column() -> None:
+    """Adds animales.nombre for existing databases created before this feature."""
+    inspector = inspect(engine)
+    columns = {column["name"] for column in inspector.get_columns("animales")}
+    if "nombre" in columns:
+        return
+
+    with engine.begin() as connection:
+        connection.execute(text("ALTER TABLE animales ADD COLUMN nombre VARCHAR(80)"))
+    logger.info("Database migrated | added animales.nombre")
+
+
+def ensure_achievement_columns() -> None:
+    """Adds achievement point storage for existing databases."""
+    inspector = inspect(engine)
+    user_columns = {column["name"] for column in inspector.get_columns("usuarios")}
+
+    with engine.begin() as connection:
+        if "puntos_logros" not in user_columns:
+            connection.execute(text("ALTER TABLE usuarios ADD COLUMN puntos_logros INTEGER DEFAULT 0"))
+            logger.info("Database migrated | added usuarios.puntos_logros")
+        connection.execute(text("UPDATE usuarios SET puntos_logros = 0 WHERE puntos_logros IS NULL"))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # --- startup ---
     # 1. Construir las tablas si no existen (gestionado por los modelos SQLAlchemy).
     models.Base.metadata.create_all(bind=engine)
-    # 2. Sembrar los niveles base (idempotente).
+    # 2. Aplicar migraciones ligeras para bases existentes.
+    ensure_optional_animal_name_column()
+    ensure_achievement_columns()
+    # 3. Sembrar los niveles base (idempotente).
     seed_niveles()
     logger.info(
         "PawTrack backend started successfully | environment=%s | db_configured=%s | version=%s",
@@ -242,6 +270,7 @@ def actualizar_nivel_usuario(usuario: models.Usuario, db: Session):
     if nivel_correspondiente and usuario.nivel_actual != nivel_correspondiente.nivel:
         usuario.nivel_actual = nivel_correspondiente.nivel
 
+
 # ==========================================
 # ENDPOINT DE INICIO
 # ==========================================
@@ -272,6 +301,26 @@ def obtener_perfil_usuario(current_user: models.Usuario = Depends(get_current_us
     Incluye estadísticas calculadas automáticamente por los modelos de SQLAlchemy.
     """
     return current_user
+
+
+@app.get("/usuarios/me/logros", response_model=schemas.LogrosUsuarioResponse)
+def obtener_logros_usuario(
+    current_user: models.Usuario = Depends(get_current_user),
+    db: Session = Depends(get_db),
+):
+    logros = evaluate_user_achievements(current_user, db)
+    commit_db(db)
+    db.refresh(current_user)
+    return {
+        "puntos_logros": current_user.puntos_logros or 0,
+        "patitas": current_user.puntos_logros or 0,
+        "categorias": ACHIEVEMENT_CATEGORIES,
+        "rarezas": [
+            {"id": rarity_id, "label": rarity["label"]}
+            for rarity_id, rarity in ACHIEVEMENT_RARITIES.items()
+        ],
+        "logros": logros,
+    }
 
 @app.get("/usuarios/", response_model=List[schemas.UsuarioPublico])
 def obtener_usuarios(db: Session = Depends(get_db)):
@@ -462,6 +511,7 @@ def registrar_nuevo_animal(
     # 1. Crear Animal
     nuevo_animal = models.Animal(
         id_descubridor=current_user.id_usuario,
+        nombre=datos.nombre.strip() if datos.nombre else None,
         especie=datos.especie,
         color_principal=datos.color_principal,
         foto_principal=datos.foto_principal,
@@ -489,13 +539,15 @@ def registrar_nuevo_animal(
     # 3. Otorgar XP
     current_user.puntos_totales += 5
     actualizar_nivel_usuario(current_user, db)
+    evaluate_user_achievements(current_user, db)
 
     commit_db(db)
     db.refresh(nuevo_animal)
 
     logger.info(
-        "Animal created | animal_id=%s | especie=%s",
+        "Animal created | animal_id=%s | nombre=%s | especie=%s",
         nuevo_animal.id_animal,
+        nuevo_animal.nombre,
         nuevo_animal.especie,
     )
     return nuevo_animal
@@ -513,6 +565,7 @@ def actualizar_animal(
     if str(animal_db.id_descubridor) != str(current_user.id_usuario):
         raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="No tienes permisos para modificar el perfil de este animal.")
 
+    animal_db.nombre = animal_actualizado.nombre.strip() if animal_actualizado.nombre else None
     animal_db.especie = animal_actualizado.especie
     animal_db.color_principal = animal_actualizado.color_principal
     animal_db.foto_principal = animal_actualizado.foto_principal
@@ -560,6 +613,7 @@ def agregar_avistamiento(
     # 4. Otorgar XP al usuario por contribuir al seguimiento
     current_user.puntos_totales += 5
     actualizar_nivel_usuario(current_user, db)
+    evaluate_user_achievements(current_user, db)
 
     # 5. Guardar transacción completa
     commit_db(db)
@@ -700,6 +754,7 @@ def confirmar_avistamiento(
 
     current_user.puntos_totales += 1
     actualizar_nivel_usuario(current_user, db)
+    evaluate_user_achievements(current_user, db)
 
     commit_db(db)
     db.refresh(nueva_confirmacion)

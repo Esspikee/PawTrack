@@ -8,7 +8,7 @@ import TopBar from "../components/TopBar";
 import { usePawTrack } from "../context/usePawTrack";
 
 function Profile() {
-  const { currentUser, loadCurrentUser, logout, userError, userLoading } = usePawTrack();
+  const { achievementPoints, currentUser, loadCurrentUser, logout, userError, userLoading } = usePawTrack();
   const navigate = useNavigate();
 
   if (userLoading) return <AppShell><StatusPanel message="Cargando perfil..." /></AppShell>;
@@ -20,7 +20,8 @@ function Profile() {
     ["paw", "Animales reportados", currentUser.animalsDiscovered],
     ["mapPin", "Avistamientos realizados", currentUser.sightings],
     ["trophy", "Confirmaciones", currentUser.confirmations],
-    ["star", "Puntos totales", currentUser.points],
+    ["star", "XP total", currentUser.points],
+    ["trophy", "Patitas", achievementPoints],
   ];
 
   const closeSession = () => {

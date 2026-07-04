@@ -7,6 +7,7 @@ import { usePawTrack } from "../context/usePawTrack";
 
 function LoginForm() {
   const [form, setForm] = useState({ email: "", password: "" });
+  const [showPassword, setShowPassword] = useState(false);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const { login } = usePawTrack();
@@ -65,10 +66,17 @@ function LoginForm() {
                 onChange={updateField}
                 placeholder="********"
                 required
-                type="password"
+                type={showPassword ? "text" : "password"}
                 value={form.password}
               />
-              <Icon name="eye" size={20} />
+              <button
+                aria-label={showPassword ? "Ocultar contrasena" : "Mostrar contrasena"}
+                className="password-toggle"
+                onClick={() => setShowPassword((current) => !current)}
+                type="button"
+              >
+                <Icon name="eye" size={20} />
+              </button>
             </span>
           </label>
 

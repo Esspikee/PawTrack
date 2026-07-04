@@ -26,6 +26,7 @@ class UsuarioPublico(BaseModel):
     id_usuario: uuid.UUID
     username: str
     puntos_totales: int
+    puntos_logros: int
     nivel_actual: int
     fecha_creacion: datetime
     animales_descubiertos: int
@@ -55,6 +56,7 @@ class UsuarioCreate(UsuarioBase):
 class UsuarioResponse(UsuarioBase):
     id_usuario: uuid.UUID
     puntos_totales: int
+    puntos_logros: int
     nivel_actual: int
     fecha_creacion: datetime
     animales_descubiertos: int
@@ -63,6 +65,43 @@ class UsuarioResponse(UsuarioBase):
 
     class Config:
         from_attributes = True
+
+
+class LogroResponse(BaseModel):
+    clave: str
+    titulo: str
+    descripcion: str
+    icono: str
+    puntos: int
+    patitas: int
+    objetivo: int
+    progreso: int
+    completado: bool
+    categoria: str
+    categoria_titulo: str
+    rareza: str
+    rareza_titulo: str
+    oculto: bool
+    fecha_desbloqueo: Optional[datetime] = None
+
+
+class CategoriaLogroResponse(BaseModel):
+    id: str
+    label: str
+    icon: str
+
+
+class RarezaLogroResponse(BaseModel):
+    id: str
+    label: str
+
+
+class LogrosUsuarioResponse(BaseModel):
+    puntos_logros: int
+    patitas: int
+    categorias: List[CategoriaLogroResponse]
+    rarezas: List[RarezaLogroResponse]
+    logros: List[LogroResponse]
 
 # ==========================================
 # ESQUEMAS DE CONFIRMACIÓN
@@ -106,6 +145,7 @@ class AvistamientoResponse(AvistamientoBase):
 # ESQUEMAS DE ANIMAL (INDIVIDUO)
 # ==========================================
 class AnimalCreate(BaseModel):
+    nombre: Optional[str] = None
     especie: EspeciePermitida
     color_principal: str
     foto_principal: Optional[str] = None
@@ -116,12 +156,14 @@ class AnimalCreate(BaseModel):
     descripcion: Optional[str] = None
 
 class AnimalUpdate(BaseModel):
+    nombre: Optional[str] = None
     especie: EspeciePermitida
     color_principal: str
     foto_principal: Optional[str] = None
 
 class AnimalResponse(BaseModel):
     id_animal: uuid.UUID
+    nombre: Optional[str] = None
     especie: EspeciePermitida
     color_principal: str
     foto_principal: Optional[str] = None

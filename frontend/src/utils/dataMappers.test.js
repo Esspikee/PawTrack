@@ -1,8 +1,9 @@
 import { describe, expect, it, vi } from "vitest";
-import { animalTitle, formatCoordinates, formatRelativeTime, mapAnimal, mapSighting, mapUser } from "./dataMappers";
+import { animalTitle, formatCoordinates, formatRelativeTime, mapAchievementsResponse, mapAnimal, mapSighting, mapUser } from "./dataMappers";
 
 const animalResponse = {
   id_animal: "11111111-1111-1111-1111-111111111111",
+  nombre: null,
   especie: "Gato",
   color_principal: "Negro",
   foto_principal: "/uploads/cat.jpg",
@@ -34,6 +35,14 @@ describe("backend data mappers", () => {
     expect(mapAnimal(animalResponse).name).toBe("Gato · Negro");
   });
 
+  it("prefers a custom animal name when one exists", () => {
+    expect(animalTitle({ ...animalResponse, nombre: "Milo" })).toBe("Milo");
+    expect(mapAnimal({ ...animalResponse, nombre: "Milo" })).toMatchObject({
+      customName: "Milo",
+      name: "Milo",
+    });
+  });
+
   it("maps UUID, coordinates, image and sightings without mock-only fields", () => {
     const animal = mapAnimal(animalResponse);
     expect(animal.id).toBe(animalResponse.id_animal);
@@ -51,6 +60,7 @@ describe("backend data mappers", () => {
       username: "laura",
       email: "laura@example.com",
       puntos_totales: 35,
+      puntos_logros: 5,
       nivel_actual: 2,
       animales_descubiertos: 4,
       avistamientos_realizados: 12,
@@ -62,9 +72,86 @@ describe("backend data mappers", () => {
     expect(user).toMatchObject({
       animalsDiscovered: 4,
       confirmations: 8,
+      achievementPoints: 5,
       level: 2,
       points: 35,
       sightings: 12,
+    });
+  });
+
+  it("maps Patitas, categories, rarity and achievement progress", () => {
+    const mapped = mapAchievementsResponse({
+      patitas: 15,
+      puntos_logros: 5,
+      categorias: [{ id: "dog_breeds", label: "Razas de perros", icon: "paw" }],
+      rarezas: [{ id: "common", label: "Comun" }],
+      logros: [{
+        clave: "three_huskies",
+        titulo: "Llamado de manada I",
+        descripcion: "Registra 3 huskies.",
+        icono: "paw",
+        puntos: 5,
+        patitas: 5,
+        objetivo: 3,
+        progreso: 2,
+        completado: false,
+        categoria: "dog_breeds",
+        categoria_titulo: "Razas de perros",
+        rareza: "common",
+        rareza_titulo: "Comun",
+        oculto: false,
+        fecha_desbloqueo: null,
+      }],
+    });
+
+    expect(mapped.achievementPoints).toBe(15);
+    expect(mapped.categories).toHaveLength(1);
+    expect(mapped.rarities).toHaveLength(1);
+    expect(mapped.achievements[0]).toMatchObject({
+      category: "dog_breeds",
+      categoryLabel: "Razas de perros",
+      completed: false,
+      current: 2,
+      goal: 3,
+      hidden: false,
+      id: "three_huskies",
+      pawPrintReward: 5,
+      points: 5,
+      rarity: "common",
+      rarityLabel: "Comun",
+      value: "2/3",
+    });
+    expect(mapped.achievements[0].progress).toBeCloseTo(66.66, 1);
+  });
+
+  it("maps locked hidden achievements without revealing extra fields", () => {
+    const mapped = mapAchievementsResponse({
+      patitas: 0,
+      logros: [{
+        clave: "lucky_encounter",
+        titulo: "???",
+        descripcion: "Logro oculto",
+        icono: "lock",
+        puntos: 100,
+        patitas: 100,
+        objetivo: 1,
+        progreso: 0,
+        completado: false,
+        categoria: "hidden",
+        categoria_titulo: "Ocultos",
+        rareza: "rare",
+        rareza_titulo: "Raro",
+        oculto: true,
+        fecha_desbloqueo: null,
+      }],
+    });
+
+    expect(mapped.achievements[0]).toMatchObject({
+      detail: "Logro oculto",
+      hidden: true,
+      label: "???",
+      pawPrintReward: 100,
+      progress: 0,
     });
   });
 

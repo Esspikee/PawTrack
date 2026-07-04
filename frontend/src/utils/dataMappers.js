@@ -13,6 +13,9 @@ const nextLevelAt = { 1: 10, 2: 50, 3: 150, 4: 500 };
 const timezonePattern = /(Z|[+-]\d{2}:?\d{2})$/;
 
 export function animalTitle(animal) {
+  const customName = (animal?.nombre ?? animal?.customName ?? "").trim();
+  if (customName) return customName;
+
   const species = animal?.especie ?? animal?.species ?? "Animal";
   const color = animal?.color_principal ?? animal?.color ?? "Sin color";
   return `${species} · ${color}`;
@@ -102,6 +105,7 @@ export function mapAnimal(raw) {
   return {
     id: raw.id_animal,
     name: animalTitle(raw),
+    customName: raw.nombre ?? "",
     species,
     breed: color,
     color,
@@ -123,6 +127,42 @@ export function mapAnimal(raw) {
   };
 }
 
+export function mapAchievement(raw) {
+  const goal = raw.objetivo ?? 1;
+  const progress = Math.max(0, Math.min(goal, raw.progreso ?? 0));
+  const reward = raw.patitas ?? raw.puntos ?? 0;
+
+  return {
+    id: raw.clave,
+    icon: raw.icono || "trophy",
+    label: raw.titulo,
+    detail: raw.descripcion,
+    points: reward,
+    pawPrintReward: reward,
+    goal,
+    current: progress,
+    progress: goal > 0 ? Math.min(100, (progress / goal) * 100) : 100,
+    completed: Boolean(raw.completado),
+    category: raw.categoria ?? "general",
+    categoryLabel: raw.categoria_titulo ?? "General",
+    rarity: raw.rareza ?? "common",
+    rarityLabel: raw.rareza_titulo ?? "Comun",
+    hidden: Boolean(raw.oculto),
+    unlockedAt: raw.fecha_desbloqueo ?? null,
+    value: `${progress}/${goal}`,
+    raw,
+  };
+}
+
+export function mapAchievementsResponse(raw) {
+  return {
+    achievementPoints: raw?.patitas ?? raw?.puntos_logros ?? 0,
+    achievements: (raw?.logros ?? []).map(mapAchievement),
+    categories: raw?.categorias ?? [],
+    rarities: raw?.rarezas ?? [],
+  };
+}
+
 export function mapUser(raw) {
   if (!raw) return null;
   const level = raw.nivel_actual ?? 1;
@@ -136,6 +176,7 @@ export function mapUser(raw) {
     username: raw.username,
     email: raw.email,
     points,
+    achievementPoints: raw.puntos_logros ?? 0,
     level,
     rank: rankByLevel[level] ?? "Explorador",
     xpProgress: progress,

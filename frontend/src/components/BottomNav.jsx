@@ -5,7 +5,7 @@ const items = [
   { to: "/dashboard", label: "Inicio", icon: "home" },
   { to: "/animals", label: "Mapa", icon: "mapPin" },
   { to: "/animals/new", label: "Nuevo", icon: "plus", featured: true },
-  { to: "/achievements", label: "Logros", icon: "trophy" },
+  { to: "/codex", label: "Códice", icon: "book" },
   { to: "/profile", label: "Perfil", icon: "user" },
 ];
 
