@@ -68,16 +68,16 @@ function Settings() {
               <strong>OK</strong>
             </div>
             <div className="settings-copy-row">
-              <small>Base URL</small>
+              <small>URL base</small>
               <strong>{API_BASE_URL}</strong>
             </div>
             <div className="settings-copy-row">
               <small>Ambiente</small>
-              <strong>{health?.environment || "unknown"}</strong>
+              <strong>{health?.environment || "No disponible"}</strong>
             </div>
             <div className="settings-copy-row">
-              <small>Version backend</small>
-              <strong>{health?.version || "unknown"}</strong>
+              <small>Version del backend</small>
+              <strong>{health?.version || "No disponible"}</strong>
             </div>
           </>
         )}
@@ -99,7 +99,7 @@ function Settings() {
         <h2>Idioma</h2>
         <div className="settings-copy-row">
           <small>Preferencia</small>
-          <strong>{locale === "en" ? "English" : "Español"}</strong>
+          <strong>{locale === "en" ? "Inglés" : "Español"}</strong>
         </div>
         <p className="settings-note">
           Disponible en iOS y en navegador. La app guarda el idioma elegido en este dispositivo.
@@ -107,7 +107,7 @@ function Settings() {
         <div className="settings-language-grid" role="group" aria-label="Seleccion de idioma">
           {[
             { code: "es", label: "Español" },
-            { code: "en", label: "English" },
+            { code: "en", label: "Inglés" },
             { code: "auto", label: "Auto" },
           ].map((option) => (
             <button

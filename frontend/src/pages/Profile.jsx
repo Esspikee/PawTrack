@@ -21,7 +21,7 @@ function Profile() {
     ["mapPin", "Avistamientos realizados", currentUser.sightings],
     ["trophy", "Confirmaciones", currentUser.confirmations],
     ["star", "XP total", currentUser.points],
-    ["trophy", "Puntos de logro", achievementPoints],
+    ["trophy", "Patitas", achievementPoints],
   ];
 
   const closeSession = () => {

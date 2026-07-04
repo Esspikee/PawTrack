@@ -1,7 +1,11 @@
 import { Navigate, Route, Routes } from "react-router-dom";
 
 import ProtectedRoute from "./components/ProtectedRoute";
-import Achievements from "./pages/Achievements";
+import Codex from "./pages/Codex";
+import CodexAchievements from "./pages/CodexAchievements";
+import CodexBestiary from "./pages/CodexBestiary";
+import CodexBreedCategory from "./pages/CodexBreedCategory";
+import CodexBreedDetails from "./pages/CodexBreedDetails";
 import Login from "./pages/Login";
 import LoginForm from "./pages/LoginForm";
 import Notifications from "./pages/Notifications";
@@ -29,7 +33,12 @@ function App() {
       <Route path="/animals/:animalId/history" element={<AnimalHistory />} />
       <Route path="/report" element={<ProtectedRoute><ReportSighting /></ProtectedRoute>} />
       <Route path="/report/:animalId" element={<ProtectedRoute><ReportSighting /></ProtectedRoute>} />
-      <Route path="/achievements" element={<ProtectedRoute><Achievements /></ProtectedRoute>} />
+      <Route path="/codex" element={<ProtectedRoute><Codex /></ProtectedRoute>} />
+      <Route path="/codex/bestiary" element={<ProtectedRoute><CodexBestiary /></ProtectedRoute>} />
+      <Route path="/codex/bestiary/:category" element={<ProtectedRoute><CodexBreedCategory /></ProtectedRoute>} />
+      <Route path="/codex/bestiary/:category/:breedId" element={<ProtectedRoute><CodexBreedDetails /></ProtectedRoute>} />
+      <Route path="/codex/achievements" element={<ProtectedRoute><CodexAchievements /></ProtectedRoute>} />
+      <Route path="/achievements" element={<Navigate to="/codex/achievements" replace />} />
       <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
       <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
       <Route path="/settings" element={<ProtectedRoute><Settings /></ProtectedRoute>} />

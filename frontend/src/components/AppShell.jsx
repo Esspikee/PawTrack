@@ -11,7 +11,7 @@ function AchievementToast({ achievement, onClose }) {
       <span>
         <small>Logro desbloqueado</small>
         <strong>{achievement.label}</strong>
-        <em>+{achievement.points} puntos de logro</em>
+        <em>+{achievement.points} Patitas</em>
       </span>
       <button aria-label="Cerrar logro" onClick={onClose} type="button">x</button>
     </aside>

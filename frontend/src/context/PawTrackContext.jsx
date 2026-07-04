@@ -6,7 +6,9 @@ import { PawTrackContext } from "./usePawTrack";
 export function PawTrackProvider({ children }) {
   const [animals, setAnimals] = useState([]);
   const [achievements, setAchievements] = useState([]);
+  const [achievementCategories, setAchievementCategories] = useState([]);
   const [achievementPoints, setAchievementPoints] = useState(0);
+  const [achievementRarities, setAchievementRarities] = useState([]);
   const [recentAchievement, setRecentAchievement] = useState(null);
   const [currentUser, setCurrentUser] = useState(null);
   const [authenticated, setAuthenticated] = useState(hasToken());
@@ -94,7 +96,9 @@ export function PawTrackProvider({ children }) {
     if (!hasToken()) {
       achievementsRef.current = [];
       setAchievements([]);
+      setAchievementCategories([]);
       setAchievementPoints(0);
+      setAchievementRarities([]);
       return { achievementPoints: 0, achievements: [] };
     }
 
@@ -111,7 +115,9 @@ export function PawTrackProvider({ children }) {
     }
 
     achievementsRef.current = mapped.achievements;
+    setAchievementCategories(mapped.categories);
     setAchievementPoints(mapped.achievementPoints);
+    setAchievementRarities(mapped.rarities);
     setAchievements(mapped.achievements);
     return mapped;
   }, [showAchievementToast]);
@@ -137,7 +143,9 @@ export function PawTrackProvider({ children }) {
       setAuthenticated(false);
       achievementsRef.current = [];
       setAchievements([]);
+      setAchievementCategories([]);
       setAchievementPoints(0);
+      setAchievementRarities([]);
       setCurrentUser(null);
       clearRecentAchievement();
       setUserLoading(false);
@@ -171,7 +179,9 @@ export function PawTrackProvider({ children }) {
     setAuthenticated(false);
     achievementsRef.current = [];
     setAchievements([]);
+    setAchievementCategories([]);
     setAchievementPoints(0);
+    setAchievementRarities([]);
     setCurrentUser(null);
     clearRecentAchievement();
   }, [clearRecentAchievement]);
@@ -198,7 +208,9 @@ export function PawTrackProvider({ children }) {
 
   const value = useMemo(() => ({
     addSighting,
+    achievementCategories,
     achievementPoints,
+    achievementRarities,
     achievements,
     animals,
     animalsError,
@@ -222,7 +234,9 @@ export function PawTrackProvider({ children }) {
     userLoading,
   }), [
     addSighting,
+    achievementCategories,
     achievementPoints,
+    achievementRarities,
     achievements,
     animals,
     animalsError,

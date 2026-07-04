@@ -79,32 +79,80 @@ describe("backend data mappers", () => {
     });
   });
 
-  it("maps achievement points and husky achievement progress", () => {
+  it("maps Patitas, categories, rarity and achievement progress", () => {
     const mapped = mapAchievementsResponse({
+      patitas: 15,
       puntos_logros: 5,
+      categorias: [{ id: "dog_breeds", label: "Razas de perros", icon: "paw" }],
+      rarezas: [{ id: "common", label: "Comun" }],
       logros: [{
         clave: "three_huskies",
-        titulo: "Manada husky",
-        descripcion: "Registra 3 perros husky.",
-        icono: "trophy",
+        titulo: "Llamado de manada I",
+        descripcion: "Registra 3 huskies.",
+        icono: "paw",
         puntos: 5,
+        patitas: 5,
         objetivo: 3,
         progreso: 2,
         completado: false,
+        categoria: "dog_breeds",
+        categoria_titulo: "Razas de perros",
+        rareza: "common",
+        rareza_titulo: "Comun",
+        oculto: false,
         fecha_desbloqueo: null,
       }],
     });
 
-    expect(mapped.achievementPoints).toBe(5);
+    expect(mapped.achievementPoints).toBe(15);
+    expect(mapped.categories).toHaveLength(1);
+    expect(mapped.rarities).toHaveLength(1);
     expect(mapped.achievements[0]).toMatchObject({
+      category: "dog_breeds",
+      categoryLabel: "Razas de perros",
       completed: false,
       current: 2,
       goal: 3,
+      hidden: false,
       id: "three_huskies",
+      pawPrintReward: 5,
       points: 5,
+      rarity: "common",
+      rarityLabel: "Comun",
       value: "2/3",
     });
     expect(mapped.achievements[0].progress).toBeCloseTo(66.66, 1);
+  });
+
+  it("maps locked hidden achievements without revealing extra fields", () => {
+    const mapped = mapAchievementsResponse({
+      patitas: 0,
+      logros: [{
+        clave: "lucky_encounter",
+        titulo: "???",
+        descripcion: "Logro oculto",
+        icono: "lock",
+        puntos: 100,
+        patitas: 100,
+        objetivo: 1,
+        progreso: 0,
+        completado: false,
+        categoria: "hidden",
+        categoria_titulo: "Ocultos",
+        rareza: "rare",
+        rareza_titulo: "Raro",
+        oculto: true,
+        fecha_desbloqueo: null,
+      }],
+    });
+
+    expect(mapped.achievements[0]).toMatchObject({
+      detail: "Logro oculto",
+      hidden: true,
+      label: "???",
+      pawPrintReward: 100,
+      progress: 0,
+    });
   });
 
   it("formats coordinates defensively", () => {

@@ -73,14 +73,34 @@ class LogroResponse(BaseModel):
     descripcion: str
     icono: str
     puntos: int
+    patitas: int
     objetivo: int
     progreso: int
     completado: bool
+    categoria: str
+    categoria_titulo: str
+    rareza: str
+    rareza_titulo: str
+    oculto: bool
     fecha_desbloqueo: Optional[datetime] = None
+
+
+class CategoriaLogroResponse(BaseModel):
+    id: str
+    label: str
+    icon: str
+
+
+class RarezaLogroResponse(BaseModel):
+    id: str
+    label: str
 
 
 class LogrosUsuarioResponse(BaseModel):
     puntos_logros: int
+    patitas: int
+    categorias: List[CategoriaLogroResponse]
+    rarezas: List[RarezaLogroResponse]
     logros: List[LogroResponse]
 
 # ==========================================

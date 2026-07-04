@@ -34,8 +34,8 @@ function Achievements() {
         <HeartOrnament />
         <PetAvatar size="md" type="husky" />
         <div>
-          <strong>Puntos de logro</strong>
-          <span>{achievementPoints} puntos separados de XP</span>
+          <strong>Patitas</strong>
+          <span>{achievementPoints} Patitas separadas de XP</span>
           <div className="progress"><span style={{ width: `${Math.min(100, achievementPoints * 20)}%` }} /></div>
         </div>
       </section>

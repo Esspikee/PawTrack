@@ -24,7 +24,7 @@ function Dashboard() {
 
   const statsCards = [
     { label: "XP", value: currentUser.points, icon: "star" },
-    { label: "Logros", value: achievementPoints, icon: "trophy" },
+    { label: "Patitas", value: achievementPoints, icon: "trophy" },
     { label: "Animales", value: currentUser.animalsDiscovered, icon: "paw" },
     { label: "Avistamientos", value: currentUser.sightings, icon: "mapPin" },
   ];
@@ -65,7 +65,7 @@ function Dashboard() {
         <Link className="menu-card" to="/animals"><Icon name="mapPin" /><span><strong>Mapa</strong><small>Ver animales cercanos</small></span><Icon name="chevronRight" /></Link>
         <Link className="menu-card" to="/animals/new"><Icon name="plus" /><span><strong>Anadir animal</strong><small>Foto y ubicacion</small></span><Icon name="chevronRight" /></Link>
         <Link className="menu-card" to="/animals"><Icon name="paw" /><span><strong>Animales</strong><small>Explorar catalogo</small></span><Icon name="chevronRight" /></Link>
-        <Link className="menu-card" to="/achievements"><Icon name="trophy" /><span><strong>Logros</strong><small>Misiones y puntos</small></span><Icon name="chevronRight" /></Link>
+        <Link className="menu-card" to="/codex"><Icon name="book" /><span><strong>Códice</strong><small>Bestiario y logros</small></span><Icon name="chevronRight" /></Link>
         <Link className="menu-card" to="/profile"><Icon name="user" /><span><strong>Mi perfil</strong><small>Ver estadisticas</small></span><Icon name="chevronRight" /></Link>
       </section>
     </AppShell>

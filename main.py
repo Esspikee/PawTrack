@@ -16,10 +16,9 @@ from datetime import datetime, timezone
 from pathlib import Path
 from uuid import uuid4
 from contextlib import asynccontextmanager
-import re
-import unicodedata
 
 # Importaciones locales
+from achievements import ACHIEVEMENT_CATEGORIES, ACHIEVEMENT_RARITIES, evaluate_user_achievements
 from database import engine, SessionLocal
 import models, schemas, security, config, logging_config
 
@@ -38,34 +37,6 @@ NIVELES_SEED = [
     (4, "Héroe", 150),
     (5, "Leyenda", 500),
 ]
-
-ACHIEVEMENT_DEFINITIONS = [
-    {
-        "clave": "three_huskies",
-        "titulo": "Manada husky",
-        "descripcion": "Registra 3 perros husky.",
-        "icono": "trophy",
-        "puntos": 5,
-        "objetivo": 3,
-        "progress": lambda usuario: contar_huskies_usuario(usuario),
-    },
-]
-
-HUSKY_ALIASES = {
-    "husky",
-    "huskie",
-    "huskies",
-    "huski",
-    "huskie",
-    "haski",
-    "hasky",
-    "juski",
-    "jusky",
-    "juzki",
-    "siberiano",
-    "siberian",
-}
-
 
 def seed_niveles() -> None:
     """Inserta los niveles base de forma idempotente (no duplica si ya existen)."""
@@ -294,81 +265,6 @@ def actualizar_nivel_usuario(usuario: models.Usuario, db: Session):
         usuario.nivel_actual = nivel_correspondiente.nivel
 
 
-def normalizar_texto_logro(valor: str | None) -> str:
-    if not valor:
-        return ""
-
-    normalized = unicodedata.normalize("NFKD", valor)
-    without_accents = "".join(char for char in normalized if not unicodedata.combining(char))
-    return re.sub(r"[^a-z0-9]+", " ", without_accents.lower()).strip()
-
-
-def texto_parece_husky(valor: str | None) -> bool:
-    normalized = normalizar_texto_logro(valor)
-    if not normalized:
-        return False
-
-    tokens = normalized.split()
-    compact = normalized.replace(" ", "")
-    return compact in HUSKY_ALIASES or any(token in HUSKY_ALIASES for token in tokens)
-
-
-def animal_parece_husky(animal: models.Animal) -> bool:
-    if animal.especie != models.EspeciePermitida.PERRO:
-        return False
-
-    textos = [
-        animal.nombre,
-        animal.color_principal,
-        *(avistamiento.descripcion for avistamiento in animal.avistamientos),
-    ]
-    return any(texto_parece_husky(texto) for texto in textos)
-
-
-def contar_huskies_usuario(usuario: models.Usuario) -> int:
-    return sum(1 for animal in usuario.animales_descubiertos_rel if animal_parece_husky(animal))
-
-
-def evaluar_logros_usuario(usuario: models.Usuario, db: Session) -> list[dict]:
-    desbloqueados = {
-        logro.clave_logro: logro
-        for logro in db.query(models.LogroUsuario)
-        .filter(models.LogroUsuario.id_usuario == usuario.id_usuario)
-        .all()
-    }
-    respuestas = []
-
-    for definition in ACHIEVEMENT_DEFINITIONS:
-        progreso = int(definition["progress"](usuario) or 0)
-        objetivo = int(definition["objetivo"])
-        logro_db = desbloqueados.get(definition["clave"])
-
-        if not logro_db and progreso >= objetivo:
-            logro_db = models.LogroUsuario(
-                id_usuario=usuario.id_usuario,
-                clave_logro=definition["clave"],
-                puntos_otorgados=definition["puntos"],
-                fecha_desbloqueo=datetime.now(timezone.utc),
-            )
-            db.add(logro_db)
-            usuario.puntos_logros = (usuario.puntos_logros or 0) + definition["puntos"]
-            db.flush()
-            desbloqueados[definition["clave"]] = logro_db
-
-        respuestas.append({
-            "clave": definition["clave"],
-            "titulo": definition["titulo"],
-            "descripcion": definition["descripcion"],
-            "icono": definition["icono"],
-            "puntos": definition["puntos"],
-            "objetivo": objetivo,
-            "progreso": min(progreso, objetivo),
-            "completado": logro_db is not None,
-            "fecha_desbloqueo": logro_db.fecha_desbloqueo if logro_db else None,
-        })
-
-    return respuestas
-
 # ==========================================
 # ENDPOINT DE INICIO
 # ==========================================
@@ -402,11 +298,17 @@ def obtener_logros_usuario(
     current_user: models.Usuario = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
-    logros = evaluar_logros_usuario(current_user, db)
+    logros = evaluate_user_achievements(current_user, db)
     commit_db(db)
     db.refresh(current_user)
     return {
         "puntos_logros": current_user.puntos_logros or 0,
+        "patitas": current_user.puntos_logros or 0,
+        "categorias": ACHIEVEMENT_CATEGORIES,
+        "rarezas": [
+            {"id": rarity_id, "label": rarity["label"]}
+            for rarity_id, rarity in ACHIEVEMENT_RARITIES.items()
+        ],
         "logros": logros,
     }
 
@@ -627,7 +529,7 @@ def registrar_nuevo_animal(
     # 3. Otorgar XP
     current_user.puntos_totales += 5
     actualizar_nivel_usuario(current_user, db)
-    evaluar_logros_usuario(current_user, db)
+    evaluate_user_achievements(current_user, db)
 
     commit_db(db)
     db.refresh(nuevo_animal)
@@ -701,7 +603,7 @@ def agregar_avistamiento(
     # 4. Otorgar XP al usuario por contribuir al seguimiento
     current_user.puntos_totales += 5
     actualizar_nivel_usuario(current_user, db)
-    evaluar_logros_usuario(current_user, db)
+    evaluate_user_achievements(current_user, db)
 
     # 5. Guardar transacción completa
     commit_db(db)
@@ -842,7 +744,7 @@ def confirmar_avistamiento(
 
     current_user.puntos_totales += 1
     actualizar_nivel_usuario(current_user, db)
-    evaluar_logros_usuario(current_user, db)
+    evaluate_user_achievements(current_user, db)
 
     commit_db(db)
     db.refresh(nueva_confirmacion)

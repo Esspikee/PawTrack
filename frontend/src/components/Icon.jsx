@@ -1,8 +1,10 @@
 const icons = {
   arrowLeft: "M6 2h3v3h5v6H9v3H6v-3H2V5h4V2Z",
   bell: "M6 1h4v2h2v2h1v5h2v2H1v-2h2V5h1V3h2V1Zm0 12h4v2H6v-2Z",
+  book: "M2 1h5v2h2V1h5v13H9v1H7v-1H2V1Zm2 2v9h3V4H5V3H4Zm5 1v8h3V3h-1v1H9Z",
   calendar: "M3 1h2v2h6V1h2v2h2v12H1V3h2V1Zm0 6v6h10V7H3Zm2 2h2v2H5V9Zm4 0h2v2H9V9Z",
   camera: "M5 2h6l1 2h3v10H1V4h3l1-2Zm3 3a4 4 0 1 0 0 8 4 4 0 0 0 0-8Zm0 2a2 2 0 1 1 0 4 2 2 0 0 1 0-4Z",
+  check: "M13 2h3v4h-2v2h-2v2h-2v2H8v2H4v-2H2v-2H0V6h4v2h2v2h1V8h2V6h2V4h2V2Z",
   chevronRight: "M5 2h4v2h2v2h2v4h-2v2H9v2H5v-3h2V9h2V7H7V5H5V2Z",
   eye: "M4 3h8v2h2v2h2v2h-2v2h-2v2H4v-2H2V9H0V7h2V5h2V3Zm4 3a3 3 0 1 0 0 6 3 3 0 0 0 0-6Zm0 2a1 1 0 1 1 0 2 1 1 0 0 1 0-2Z",
   heart: "M2 3h4v2h4V3h4v2h2v5h-2v2h-2v2h-2v2H6v-2H4v-2H2v-2H0V5h2V3Z",

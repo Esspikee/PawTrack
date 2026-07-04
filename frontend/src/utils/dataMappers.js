@@ -130,17 +130,24 @@ export function mapAnimal(raw) {
 export function mapAchievement(raw) {
   const goal = raw.objetivo ?? 1;
   const progress = Math.max(0, Math.min(goal, raw.progreso ?? 0));
+  const reward = raw.patitas ?? raw.puntos ?? 0;
 
   return {
     id: raw.clave,
     icon: raw.icono || "trophy",
     label: raw.titulo,
     detail: raw.descripcion,
-    points: raw.puntos ?? 0,
+    points: reward,
+    pawPrintReward: reward,
     goal,
     current: progress,
     progress: goal > 0 ? Math.min(100, (progress / goal) * 100) : 100,
     completed: Boolean(raw.completado),
+    category: raw.categoria ?? "general",
+    categoryLabel: raw.categoria_titulo ?? "General",
+    rarity: raw.rareza ?? "common",
+    rarityLabel: raw.rareza_titulo ?? "Comun",
+    hidden: Boolean(raw.oculto),
     unlockedAt: raw.fecha_desbloqueo ?? null,
     value: `${progress}/${goal}`,
     raw,
@@ -149,8 +156,10 @@ export function mapAchievement(raw) {
 
 export function mapAchievementsResponse(raw) {
   return {
-    achievementPoints: raw?.puntos_logros ?? 0,
+    achievementPoints: raw?.patitas ?? raw?.puntos_logros ?? 0,
     achievements: (raw?.logros ?? []).map(mapAchievement),
+    categories: raw?.categorias ?? [],
+    rarities: raw?.rarezas ?? [],
   };
 }
 
