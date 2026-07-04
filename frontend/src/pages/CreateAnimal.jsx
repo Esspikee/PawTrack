@@ -15,18 +15,13 @@ function CreateAnimal() {
   const [photoUrl, setPhotoUrl] = useState("");
   const [submitting, setSubmitting] = useState(false);
   const [formError, setFormError] = useState("");
-  const { coordinates, locate, locating, locationError, locationHint, setCoordinates } = useGeolocation();
+  const { coordinates, locate, locating, locationError, locationHint } = useGeolocation();
   const { createAnimal } = usePawTrack();
   const navigate = useNavigate();
 
   const updateField = (event) => {
     const { name, value } = event.target;
     setForm((current) => ({ ...current, [name]: value }));
-  };
-
-  const updateCoordinate = (event) => {
-    const { name, value } = event.target;
-    setCoordinates((current) => ({ ...current, [name]: value }));
   };
 
   const handleSubmit = async (event) => {
@@ -82,16 +77,12 @@ function CreateAnimal() {
           </button>
         </div>
         {locationError && <p className="form-message warning">{locationError}</p>}
-        {!locationError && locationHint && !coordinates.latitude && <p className="form-message info">{locationHint}</p>}
-        <div className="coordinate-grid">
-          <label>
-            Latitud
-            <span className="input-wrap"><input name="latitude" onChange={updateCoordinate} required step="any" type="number" value={coordinates.latitude} /><Icon name="mapPin" size={18} /></span>
-          </label>
-          <label>
-            Longitud
-            <span className="input-wrap"><input name="longitude" onChange={updateCoordinate} required step="any" type="number" value={coordinates.longitude} /><Icon name="mapPin" size={18} /></span>
-          </label>
+        {!locationError && locationHint && !coordinates.latitude && (
+          <p className="form-message info">En iPhone toca Localizar para permitir el GPS.</p>
+        )}
+        <div className="hidden-coordinate-fields" aria-hidden="true">
+          <input name="latitude" readOnly type="hidden" value={coordinates.latitude} />
+          <input name="longitude" readOnly type="hidden" value={coordinates.longitude} />
         </div>
 
         <div className="form-section-title"><Icon name="paw" size={20} /><span>3. Datos rapidos</span></div>
@@ -120,8 +111,11 @@ function CreateAnimal() {
         </label>
 
         <label>
-          Descripcion opcional
-          <textarea name="description" onChange={updateField} placeholder="Collar, marcas o comportamiento..." rows="4" value={form.description} />
+          Raza
+          <span className="input-wrap">
+            <input name="description" onChange={updateField} placeholder="Husky, Labrador, Criollo..." type="text" value={form.description} />
+            <Icon name="book" size={20} />
+          </span>
         </label>
 
         <PixelButton className="full-width" disabled={submitting} type="submit">
