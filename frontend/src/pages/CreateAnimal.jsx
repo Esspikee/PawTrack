@@ -12,7 +12,7 @@ import { useGeolocation } from "../hooks/useGeolocation";
 import { validPosition } from "../utils/nearby";
 
 export default function CreateAnimal() {
-  const [form, setForm] = useState({ name: "", species: "Perro", color: "", description: "" });
+  const [form, setForm] = useState({ name: "", species: "Perro", color: "", breed: "", description: "" });
   const [photoUrl, setPhotoUrl] = useState("");
   const [photoUploading, setPhotoUploading] = useState(false);
   const [submitting, setSubmitting] = useState(false);
@@ -28,10 +28,13 @@ export default function CreateAnimal() {
     if (!photoUrl) { setFormError("Toma una foto y espera a que termine de subir."); return; }
     if (!validPosition(geo.coordinates)) { setFormError("Necesitamos una ubicacion valida para crear el pin."); return; }
     if (!form.color.trim()) { setFormError("Escribe el color principal del animal."); return; }
+    if ([form.breed.trim(), form.description.trim()].filter(Boolean).join(". ").length > 255) {
+      setFormError("La raza y la descripción deben sumar como máximo 255 caracteres."); return;
+    }
     setSubmitting(true);
     try {
       const animal = await createAnimal({ nombre: form.name.trim() || null, especie: form.species, color_principal: form.color.trim(),
-        latitud: Number(geo.coordinates.latitude), longitud: Number(geo.coordinates.longitude), foto_principal: photoUrl, descripcion: form.description.trim() });
+        latitud: Number(geo.coordinates.latitude), longitud: Number(geo.coordinates.longitude), foto_principal: photoUrl, descripcion: [form.breed.trim(), form.description.trim()].filter(Boolean).join(". ") });
       navigate(`/animals/${animal.id}`, { replace: true });
     } catch (error) { setFormError(error.message); } finally { setSubmitting(false); }
   };
@@ -40,11 +43,12 @@ export default function CreateAnimal() {
     <form className="report-form capture-form redesigned-capture" onSubmit={submit}>
       {formError && <p className="form-message error" role="alert">{formError}</p>}
       <PhotoCapture onUploaded={setPhotoUrl} onUploadingChange={setPhotoUploading} required />
-      <LocationPicker geo={geo} />
+      <LocationPicker geo={geo} showManualCoordinates={false} />
       <fieldset className="species-picker"><legend>¿Qué animal es?</legend>{["Perro", "Gato"].map(species => <label key={species}><input type="radio" name="species" value={species} checked={form.species === species} onChange={update} /><span><Icon name="paw" size={20} />{species}</span></label>)}</fieldset>
       <label className="compact-field">Color principal<input name="color" required maxLength={50} placeholder="Dorado, negro, blanco..." value={form.color} onChange={update} /></label>
       <label className="compact-field">Nombre (opcional)<input name="name" maxLength={80} placeholder="¿Tiene un nombre?" value={form.name} onChange={update} /></label>
-      <details className="extra-details"><summary>Añadir más detalles</summary><label>Descripción (opcional)<textarea name="description" maxLength={255} rows={3} placeholder="Collar, marcas o comportamiento..." value={form.description} onChange={update} /></label></details>
+      <label className="compact-field">Raza (opcional)<input name="breed" maxLength={80} placeholder="Husky, Labrador, Criollo..." value={form.breed} onChange={update} /></label>
+      <details className="extra-details"><summary>Añadir más detalles</summary><label>Descripción (opcional)<textarea name="description" maxLength={form.breed.trim() ? 253 - form.breed.trim().length : 255} rows={3} placeholder="Collar, marcas o comportamiento..." value={form.description} onChange={update} /></label></details>
       <PixelButton className="full-width publish-button" disabled={submitting || photoUploading} type="submit" icon={<Icon name="paw" size={23} />}>{submitting ? "Publicando..." : photoUploading ? "Subiendo foto..." : "Publicar avistamiento"}</PixelButton>
     </form>
   </AppShell>;

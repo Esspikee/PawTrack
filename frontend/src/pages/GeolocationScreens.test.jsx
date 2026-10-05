@@ -71,12 +71,13 @@ describe("geolocation screens", () => {
     vi.clearAllMocks();
   });
 
-  it("keeps manual coordinates available on the create animal screen when iOS needs a tap", async () => {
+  it("keeps coordinates hidden on the create animal screen while keeping iOS GPS available", async () => {
     renderWithContext(<CreateAnimal />);
 
     expect(screen.getByText(/En iPhone toca Localizar/)).toBeTruthy();
-    expect(screen.getByLabelText("Latitud")).toBeTruthy();
-    expect(screen.getByLabelText("Longitud")).toBeTruthy();
+    expect(screen.queryByLabelText("Latitud")).toBeNull();
+    expect(screen.queryByLabelText("Longitud")).toBeNull();
+    expect(screen.getByLabelText("Raza (opcional)")).toBeTruthy();
 
     await userEvent.click(screen.getByRole("button", { name: "Localizar" }));
     expect(geoMock.state.locate).toHaveBeenCalledTimes(1);
