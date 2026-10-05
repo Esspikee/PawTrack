@@ -5,13 +5,13 @@ import { hasToken } from "../services/api";
 
 function ProtectedRoute({ children }) {
   const location = useLocation();
-  const { authenticated, userLoading } = usePawTrack();
+  const { authenticated, currentUser, userLoading } = usePawTrack();
 
   if (!hasToken() || (!authenticated && !userLoading)) {
     return <Navigate replace state={{ from: location.pathname }} to="/login" />;
   }
 
-  if (userLoading) {
+  if (userLoading && !currentUser) {
     return (
       <main className="auth-screen">
         <StatusPanel message="Verificando sesion..." />

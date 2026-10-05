@@ -1,75 +1,37 @@
 import { Link } from "react-router-dom";
 import AppShell from "../components/AppShell";
-import HeartOrnament from "../components/HeartOrnament";
+import BrandHeader from "../components/BrandHeader";
+import AnimalCard from "../components/AnimalCard";
 import Icon from "../components/Icon";
-import PixelDivider from "../components/PixelDivider";
 import PetAvatar from "../components/PetAvatar";
+import PixelButton from "../components/PixelButton";
 import StatusPanel from "../components/StatusPanel";
 import { usePawTrack } from "../context/usePawTrack";
+import { useGeolocation } from "../hooks/useGeolocation";
+import { sortNearby, validPosition } from "../utils/nearby";
 
-function Dashboard() {
-  const { achievementPoints, currentUser, loadCurrentUser, userError, userLoading } = usePawTrack();
-
-  if (userLoading) {
-    return <AppShell><StatusPanel message="Cargando tu perfil..." /></AppShell>;
-  }
-
-  if (!currentUser || userError) {
-    return (
-      <AppShell>
-        <StatusPanel action={() => loadCurrentUser().catch(() => {})} message={userError || "No fue posible cargar tu perfil."} type="error" />
-      </AppShell>
-    );
-  }
-
-  const statsCards = [
-    { label: "XP", value: currentUser.points, icon: "star" },
-    { label: "Patitas", value: achievementPoints, icon: "trophy" },
-    { label: "Animales", value: currentUser.animalsDiscovered, icon: "paw" },
-    { label: "Avistamientos", value: currentUser.sightings, icon: "mapPin" },
-  ];
-
-  return (
-    <AppShell>
-      <header className="dashboard-header">
-        <Link aria-label="Menu" className="icon-button" to="/profile"><Icon name="menu" /></Link>
-        <Link aria-label="Notificaciones" className="icon-button alert" to="/notifications"><Icon name="bell" /></Link>
-      </header>
-
-      <PixelDivider compact />
-
-      <section className="player-card">
-        <HeartOrnament />
-        <PetAvatar size="md" type="husky" />
-        <div>
-          <p className="hello">Hola, {currentUser.username}!</p>
-          <strong>Nivel {currentUser.level} - {currentUser.rank}</strong>
-          <div className="xp-row">
-            <span>{currentUser.xpLabel}</span>
-            <div className="progress"><span style={{ width: `${currentUser.xpProgress}%` }} /></div>
-          </div>
-        </div>
-      </section>
-
-      <section className="stats-grid" aria-label="Resumen">
-        {statsCards.map((stat) => (
-          <article className="stat-card" key={stat.label}>
-            <Icon name={stat.icon} />
-            <strong>{stat.value}</strong>
-            <span>{stat.label}</span>
-          </article>
-        ))}
-      </section>
-
-      <section className="menu-list">
-        <Link className="menu-card" to="/animals"><Icon name="mapPin" /><span><strong>Mapa</strong><small>Ver animales cercanos</small></span><Icon name="chevronRight" /></Link>
-        <Link className="menu-card" to="/animals/new"><Icon name="plus" /><span><strong>Anadir animal</strong><small>Foto y ubicacion</small></span><Icon name="chevronRight" /></Link>
-        <Link className="menu-card" to="/animals"><Icon name="paw" /><span><strong>Animales</strong><small>Explorar catalogo</small></span><Icon name="chevronRight" /></Link>
-        <Link className="menu-card" to="/codex"><Icon name="book" /><span><strong>Códice</strong><small>Bestiario y logros</small></span><Icon name="chevronRight" /></Link>
-        <Link className="menu-card" to="/profile"><Icon name="user" /><span><strong>Mi perfil</strong><small>Ver estadisticas</small></span><Icon name="chevronRight" /></Link>
-      </section>
-    </AppShell>
-  );
+export default function Dashboard() {
+  const { currentUser, loadCurrentUser, userError, animals, animalsLoading, animalsError, loadAnimals } = usePawTrack();
+  const geo = useGeolocation({ auto: false });
+  const nearby = validPosition(geo.coordinates);
+  const featured = sortNearby(animals, geo.coordinates).slice(0, 2);
+  if (!currentUser) return <AppShell><StatusPanel action={() => loadCurrentUser().catch(() => {})} message={userError || "Cargando tu perfil..."} type={userError ? "error" : "loading"} /></AppShell>;
+  const nextLevel = { 1: 10, 2: 50, 3: 150, 4: 500 }[currentUser.level];
+  return <AppShell>
+    <BrandHeader />
+    <section className="welcome-copy"><h1>Hola, {currentUser.username}</h1></section>
+    <section className="player-card pixel-panel">
+      <PetAvatar size="lg" type={currentUser.level === 1 ? "puppy" : "husky"} />
+      <div className="player-copy"><strong>Nivel {currentUser.level} · {currentUser.rank}</strong>
+        <div className="progress" role="progressbar" aria-label="Progreso de nivel" aria-valuenow={Math.round(currentUser.xpProgress)} aria-valuemin={0} aria-valuemax={100}><span style={{ width: `${currentUser.xpProgress}%` }} /></div>
+        <b>{currentUser.points}{nextLevel ? ` / ${nextLevel}` : ""} XP</b><small>{nextLevel ? `Te faltan ${Math.max(0, nextLevel - currentUser.points)} XP para subir` : "¡Alcanzaste el nivel Leyenda!"}</small>
+      </div>
+    </section>
+    <PixelButton className="full-width main-report-action" to="/report" icon={<Icon name="paw" size={26} />}>Registrar avistamiento</PixelButton>
+    <div className="discovery-heading"><h2>{nearby ? "Cerca de ti" : "Últimos avistamientos"}</h2><Link to="/animals">Ver mapa →</Link></div>
+    {!nearby && <button type="button" className="location-link" onClick={geo.locate} disabled={geo.locating}><Icon name="mapPin" size={16} />{geo.locating ? "Buscando ubicación..." : "Usar mi ubicación para ver distancias"}</button>}
+    {geo.locationError && <p className="form-message warning">{geo.locationError}</p>}
+    {animalsLoading ? <StatusPanel message="Buscando avistamientos..." /> : animalsError ? <StatusPanel type="error" message={animalsError} action={() => loadAnimals().catch(() => {})} /> : featured.length ? <section className="discovery-grid">{featured.map(animal => <AnimalCard key={animal.id} animal={animal} />)}</section> : <section className="pixel-panel empty-discovery"><Icon name="paw" /><h2>La primera historia empieza contigo</h2><p>Aún no hay animales registrados. Comparte tu primer avistamiento.</p></section>}
+    <Link className="next-step pixel-panel" to="/report"><Icon name="paw" size={28} /><span><strong>Tu siguiente paso</strong><small>Registra {currentUser.sightings ? "otro" : "tu primer"} avistamiento.</small></span><b>+5 XP</b></Link>
+  </AppShell>;
 }
-
-export default Dashboard;

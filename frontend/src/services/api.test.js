@@ -13,6 +13,16 @@ function response(payload, status = 200) {
 }
 
 describe("api client", () => {
+  it("does not clear a new session when an old request returns 401", async () => {
+    setToken("old-session");
+    const pending = Promise.withResolvers();
+    vi.spyOn(globalThis, "fetch").mockReturnValue(pending.promise);
+    const request = api.getMe();
+    setToken("new-session");
+    pending.resolve(response({ detail: "Expired" }, 401));
+    await expect(request).rejects.toBeInstanceOf(ApiError);
+    expect(getToken()).toBe("new-session");
+  });
   beforeEach(() => {
     clearToken();
     vi.restoreAllMocks();

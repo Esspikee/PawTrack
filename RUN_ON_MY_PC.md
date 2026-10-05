@@ -2,8 +2,8 @@
 
 This is the self-host path for ~10–15 friends. One process on your PC serves
 **both** the web app and the API on the same address, so there is no separate
-frontend host and no CORS to configure. The **only** thing not yet done is
-putting an HTTPS tunnel in front of it (Step 3) — everything else is ready.
+frontend host and no CORS to configure. An HTTPS tunnel (Step 3) makes the
+running app available to testers outside your PC.
 
 > Why a tunnel is required, not optional: browsers only allow **GPS and camera**
 > on `localhost` or over **HTTPS**. Friends hitting a plain `http://<your-ip>`
@@ -22,6 +22,20 @@ cd ..
 ```
 
 ## Step 2 — Start the server
+
+On this Windows PC, Python and PostgreSQL run inside Ubuntu/WSL. From a
+PowerShell terminal in the project folder, use:
+
+```powershell
+wsl --cd "$PWD" -e .venv/bin/python -m uvicorn main:app --host 0.0.0.0 --port 8000 --forwarded-allow-ips=127.0.0.1
+```
+
+If PostgreSQL is stopped, run `wsl -e sudo service postgresql start` first.
+Keep this terminal running, then run the Cloudflare command in Step 3 in a
+second PowerShell terminal. Stop each with Ctrl+C. A restarted quick tunnel
+gets a new URL; your PC must stay awake and connected to the internet.
+
+On Linux/WSL directly:
 
 ```bash
 ./serve.sh

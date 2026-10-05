@@ -5,9 +5,9 @@ PawTrack is a community app for tracking neighborhood stray and wildlife animals
 **sightings** of that same animal over time, **confirm** other people's sightings,
 and earn **XP / levels** for participating.
 
-This repository is the **backend only** — a REST API. The mobile/web frontend
-(the part the user sees, including the camera flow) is a separate project that
-talks to this API over HTTP.
+This repository contains the **FastAPI backend** and the **React/Vite web frontend**
+in `frontend/`. The frontend talks to the API over HTTP. A production frontend
+build can also be served by FastAPI on the same address; see `RUN_ON_MY_PC.md`.
 
 > **You do not need to understand the backend code to build the frontend.**
 > You need to (1) get this server running on your machine, and (2) know which
@@ -16,6 +16,15 @@ talks to this API over HTTP.
 ---
 
 ## Tech stack (for context)
+
+Users can manage their own sightings under **Perfil → Mis avistamientos**, or
+delete them from an animal's history. The API verifies the signed-in author.
+Deleting an animal's last sighting also removes its empty map pin; the UI asks
+for confirmation before deletion.
+
+For backend tests, install `pip install -r requirements-dev.txt` and run
+`python -m unittest discover -s tests -v`. Deletion tests use an isolated,
+in-memory database and never delete real sightings.
 
 - **Python 3.12+** (built and tested on 3.13)
 - **FastAPI** — the web framework
@@ -248,7 +257,7 @@ const res = await fetch("http://127.0.0.1:8000/upload", {
 const { url } = await res.json(); // e.g. "/uploads/ab12cd34.jpg" (relative!)
 const fullUrl = `http://127.0.0.1:8000${url}`;
 ```
-- Allowed types: **JPEG, PNG, WEBP**. Max size: **5 MB**. Anything else → `400`.
+- Allowed types: **JPEG, PNG, WEBP**. Max size: **10 MB** (the web client compresses photos before upload, so real uploads are far smaller). Anything else → `400`.
 - The returned `url` is **relative** — prepend the base URL to display it.
 
 **Step 2:** use that URL when creating an animal or sighting (see below), passing
@@ -271,6 +280,7 @@ it as `foto_principal` or `foto_url`.
 | `POST /animales/{id}/avistamientos` | **yes** | Log a new sighting of an existing animal |
 | `GET /animales/{id}/historial` | no | Full chronological sighting history of an animal |
 | `DELETE /avistamientos/{id}` | **yes** | Delete a sighting you created (owner only) |
+| `GET /usuarios/me/avistamientos` | **yes** | List only your own sightings, newest first |
 | `POST /avistamientos/{id}/confirmar` | **yes** | Confirm someone else's sighting (+XP) |
 | `DELETE /avistamientos/{id}/confirmar` | **yes** | Remove your confirmation |
 | `GET /avistamientos/{id}/confirmaciones` | no | Who confirmed a sighting |

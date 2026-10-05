@@ -37,10 +37,11 @@ class UsuarioPublico(BaseModel):
         from_attributes = True
 
 class UsuarioCreate(UsuarioBase):
+    username: str = Field(..., min_length=1, max_length=50, pattern=r"\S")
     # Validación de formato de email SOLO en la entrada (creación). Los modelos
     # de respuesta mantienen 'email: str' para no romper la serialización de
     # filas antiguas que pudieran tener un email no conforme (evita 500).
-    email: EmailStr
+    email: EmailStr = Field(..., max_length=100)
     password: str = Field(..., min_length=1)
 
     @field_validator("password")
@@ -123,10 +124,10 @@ class ListaConfirmacionesResponse(BaseModel):
 # ESQUEMAS DE AVISTAMIENTO (EVENTO)
 # ==========================================
 class AvistamientoBase(BaseModel):
-    latitud: float
-    longitud: float
-    descripcion: str
-    foto_url: Optional[str] = None
+    latitud: float = Field(..., ge=-90, le=90, allow_inf_nan=False)
+    longitud: float = Field(..., ge=-180, le=180, allow_inf_nan=False)
+    descripcion: str = Field(..., max_length=255)
+    foto_url: Optional[str] = Field(None, max_length=255)
 
 class AvistamientoCreate(AvistamientoBase):
     pass
@@ -145,21 +146,21 @@ class AvistamientoResponse(AvistamientoBase):
 # ESQUEMAS DE ANIMAL (INDIVIDUO)
 # ==========================================
 class AnimalCreate(BaseModel):
-    nombre: Optional[str] = None
+    nombre: Optional[str] = Field(None, max_length=80)
     especie: EspeciePermitida
-    color_principal: str
-    foto_principal: Optional[str] = None
-    latitud: float
-    longitud: float
+    color_principal: str = Field(..., min_length=1, max_length=50, pattern=r"\S")
+    foto_principal: Optional[str] = Field(None, max_length=255)
+    latitud: float = Field(..., ge=-90, le=90, allow_inf_nan=False)
+    longitud: float = Field(..., ge=-180, le=180, allow_inf_nan=False)
     # Opcional: el formulario de captura solo pide especie + color. Si no se
     # envía descripción, el endpoint la guarda como "" (la columna sigue NOT NULL).
-    descripcion: Optional[str] = None
+    descripcion: Optional[str] = Field(None, max_length=255)
 
 class AnimalUpdate(BaseModel):
-    nombre: Optional[str] = None
+    nombre: Optional[str] = Field(None, max_length=80)
     especie: EspeciePermitida
-    color_principal: str
-    foto_principal: Optional[str] = None
+    color_principal: str = Field(..., min_length=1, max_length=50, pattern=r"\S")
+    foto_principal: Optional[str] = Field(None, max_length=255)
 
 class AnimalResponse(BaseModel):
     id_animal: uuid.UUID

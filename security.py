@@ -19,6 +19,8 @@ def obtener_password_hasheado(password: str) -> str:
 # 2. Función para verificar si la contraseña coincide
 def verificar_password(password_plano: str, password_hasheado: str) -> bool:
     password_plano_bytes = password_plano.encode('utf-8')
+    if len(password_plano_bytes) > 72:
+        return False
     password_hasheado_bytes = password_hasheado.encode('utf-8')
     return bcrypt.checkpw(password_plano_bytes, password_hasheado_bytes)
 

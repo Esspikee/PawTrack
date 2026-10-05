@@ -47,20 +47,23 @@ def main():
         raise SystemExit(f"backend /health did not return JSON: {body[:120]}") from error
     assert_ok(health.get("status") == "ok", "backend /health returned status=ok")
 
-    status, headers, _ = request(
-        f"{api_base}/usuarios/",
-        method="OPTIONS",
-        headers={
-            "Origin": frontend_origin,
-            "Access-Control-Request-Method": "POST",
-            "Access-Control-Request-Headers": "content-type",
-        },
-    )
-    assert_ok(status == 200, f"CORS preflight responded with HTTP 200 (got {status})")
-    assert_ok(
-        headers.get("access-control-allow-origin") == frontend_origin,
-        f"CORS allows frontend origin {frontend_origin}",
-    )
+    if urlparse(api_base)[:2] != urlparse(frontend_origin)[:2]:
+        status, headers, _ = request(
+            f"{api_base}/usuarios/",
+            method="OPTIONS",
+            headers={
+                "Origin": frontend_origin,
+                "Access-Control-Request-Method": "POST",
+                "Access-Control-Request-Headers": "content-type",
+            },
+        )
+        assert_ok(status == 200, f"CORS preflight responded with HTTP 200 (got {status})")
+        assert_ok(
+            headers.get("access-control-allow-origin") == frontend_origin,
+            f"CORS allows frontend origin {frontend_origin}",
+        )
+    else:
+        print("OK: frontend and API share an origin; no CORS preflight is needed")
 
     status, frontend_headers, body = request(frontend_origin)
     assert_ok(status == 200, f"frontend responded with HTTP 200 (got {status})")

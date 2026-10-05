@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { DOG_BREEDS } from "../data/breeds";
-import { buildBreedEntries, buildCodex, normalizeCodexText } from "./codex";
+import { animalMatchesBreed, buildBreedEntries, buildCodex, normalizeCodexText } from "./codex";
 
 const animals = [
   {
@@ -57,6 +57,15 @@ const historiesByAnimalId = {
 };
 
 describe("codex discovery engine", () => {
+  it("does not discover Pug from an unrelated word containing pug", () => {
+    const pug = DOG_BREEDS.find((breed) => breed.id === "pug");
+    expect(animalMatchesBreed({ species: "Perro" }, { description: "Junto al gimnasio de pugilistas" }, pug)).toBe(false);
+  });
+
+  it.each(["jusky", "huskies", "siberiano"])("recognizes the same Husky alias as backend achievements: %s", (alias) => {
+    const husky = DOG_BREEDS.find((breed) => breed.id === "husky");
+    expect(animalMatchesBreed({ species: "Perro" }, { description: `Vi un ${alias}` }, husky)).toBe(true);
+  });
   it("builds an empty initial codex before sightings load", () => {
     const codex = buildCodex();
 

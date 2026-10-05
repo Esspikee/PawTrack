@@ -1,0 +1,100 @@
+{
+  "criollo-dog": [
+    "criollo",
+    "mestizo"
+  ],
+  "labrador": [
+    "labrador"
+  ],
+  "husky": [
+    "husky",
+    "huskie",
+    "huskies",
+    "huski",
+    "haski",
+    "hasky",
+    "juski",
+    "jusky",
+    "juzki",
+    "siberiano",
+    "siberian"
+  ],
+  "yorkshire": [
+    "yorkshire",
+    "yorkie"
+  ],
+  "golden": [
+    "golden",
+    "golden retriever"
+  ],
+  "shih-tzu": [
+    "shih tzu",
+    "shihtzu",
+    "shitzu"
+  ],
+  "pug": [
+    "pug",
+    "carlino"
+  ],
+  "schnauzer": [
+    "schnauzer"
+  ],
+  "chihuahua": [
+    "chihuahua"
+  ],
+  "pastor-aleman": [
+    "pastor aleman",
+    "pastor alemán",
+    "german shepherd"
+  ],
+  "pitbull": [
+    "pitbull",
+    "pit bull"
+  ],
+  "criollo-cat": [
+    "criollo",
+    "mestizo"
+  ],
+  "persa": [
+    "persa",
+    "persian"
+  ],
+  "negro": [
+    "negro",
+    "black"
+  ],
+  "siames": [
+    "siames",
+    "siamés",
+    "siamese"
+  ],
+  "bengali": [
+    "bengali",
+    "bengal"
+  ],
+  "himalayo": [
+    "himalayo",
+    "himalayan"
+  ],
+  "maine-coon": [
+    "maine coon",
+    "mainecoon"
+  ],
+  "ragdoll": [
+    "ragdoll"
+  ],
+  "esfinge": [
+    "esfinge",
+    "sphynx"
+  ],
+  "britanico": [
+    "britanico",
+    "británico",
+    "british"
+  ],
+  "ruso-azul": [
+    "ruso azul",
+    "azul ruso",
+    "russian blue"
+  ]
+}

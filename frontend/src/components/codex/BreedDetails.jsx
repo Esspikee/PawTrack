@@ -1,10 +1,10 @@
-import Icon from "../Icon";
+import BreedSprite from "./BreedSprite";
 
 function BreedDetails({ categoryLabel, entry }) {
   if (!entry.discovered) {
     return (
       <section className="codex-journal unknown-detail">
-        <div className="journal-photo silhouette-large"><Icon name="paw" size={44} /></div>
+        <div className="breed-portrait"><BreedSprite breed={entry.breed} locked /></div>
         <span>
           <strong>Raza desconocida</strong>
           <p>Esta raza aún no ha sido descubierta.</p>
@@ -15,11 +15,7 @@ function BreedDetails({ categoryLabel, entry }) {
 
   return (
     <section className="codex-journal">
-      {entry.firstPhotoUrl ? (
-        <img alt={entry.breed.displayName} className="journal-photo" src={entry.firstPhotoUrl} />
-      ) : (
-        <div className="journal-photo silhouette-large"><Icon name="paw" size={44} /></div>
-      )}
+      <div className="breed-portrait"><BreedSprite breed={entry.breed} /></div>
       <span className="journal-title">
         <small>{categoryLabel}</small>
         <strong>{entry.breed.displayName}</strong>
@@ -30,6 +26,7 @@ function BreedDetails({ categoryLabel, entry }) {
         <span><small>Avistamientos totales</small><strong>{entry.totalSightings}</strong></span>
         {entry.recentLocation && <span><small>Ubicación reciente</small><strong>{entry.recentLocation}</strong></span>}
       </div>
+      {entry.firstPhotoUrl && <figure className="breed-sighting-photo"><img alt={`Foto de tu primer avistamiento: ${entry.breed.displayName}`} className="journal-photo" src={entry.firstPhotoUrl} loading="lazy" /><figcaption>Tu primer avistamiento</figcaption></figure>}
       {entry.recentDescription && (
         <span className="journal-note">
           <small>Descripción reciente</small>

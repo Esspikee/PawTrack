@@ -3,6 +3,8 @@ import os
 import sys
 import types
 import unittest
+import json
+from pathlib import Path
 
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -11,11 +13,16 @@ os.environ.setdefault("DATABASE_URL", "sqlite:///:memory:")
 os.environ.setdefault("SECRET_KEY", "test-secret-key-that-is-long-enough")
 sys.modules.setdefault("dotenv", types.SimpleNamespace(load_dotenv=lambda *args, **kwargs: None))
 
-from achievements import evaluate_user_achievements
+from achievements import BREEDS, evaluate_user_achievements
 import models
 
 
 class AchievementEngineTest(unittest.TestCase):
+    def test_frontend_codex_aliases_match_backend_achievements(self):
+        aliases_path = Path(__file__).resolve().parents[1] / "frontend/src/data/breedAliases.json"
+        aliases = json.loads(aliases_path.read_text(encoding="utf-8"))
+        self.assertEqual(aliases, {breed["id"]: breed["aliases"] for breed in BREEDS})
+
     def setUp(self):
         self.engine = create_engine("sqlite:///:memory:")
         models.Base.metadata.create_all(bind=self.engine)
@@ -34,6 +41,7 @@ class AchievementEngineTest(unittest.TestCase):
     def tearDown(self):
         self.db.close()
         models.Base.metadata.drop_all(bind=self.engine)
+        self.engine.dispose()
 
     def add_animal_with_sightings(self, species, text, count=1, created_at=None):
         created_at = created_at or datetime(2026, 7, 1, tzinfo=timezone.utc)

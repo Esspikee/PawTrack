@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import { AUTH_TOKEN_CLEARED_EVENT, api, clearToken, hasToken, setToken } from "../services/api";
+import { AUTH_TOKEN_CLEARED_EVENT, api, clearToken, getToken, hasToken, setToken } from "../services/api";
 import { mapAchievementsResponse, mapAnimal, mapSighting, mapUser } from "../utils/dataMappers";
 import { PawTrackContext } from "./usePawTrack";
 
@@ -44,7 +44,8 @@ export function PawTrackProvider({ children }) {
   }, []);
 
   const loadCurrentUser = useCallback(async () => {
-    if (!hasToken()) {
+    const sessionToken = getToken();
+    if (!sessionToken) {
       setAuthenticated(false);
       setCurrentUser(null);
       setUserLoading(false);
@@ -55,10 +56,12 @@ export function PawTrackProvider({ children }) {
     setUserError("");
     try {
       const user = mapUser(await api.getMe());
+      if (getToken() !== sessionToken) return null;
       setCurrentUser(user);
       setAuthenticated(true);
       return user;
     } catch (error) {
+      if (getToken() !== sessionToken) return null;
       if (error.status === 401) {
         clearToken();
         setAuthenticated(false);
@@ -69,7 +72,7 @@ export function PawTrackProvider({ children }) {
       setUserError(error.message);
       throw error;
     } finally {
-      setUserLoading(false);
+      if (getToken() === sessionToken) setUserLoading(false);
     }
   }, []);
 
@@ -93,7 +96,8 @@ export function PawTrackProvider({ children }) {
   }, []);
 
   const loadAchievements = useCallback(async ({ notify = false } = {}) => {
-    if (!hasToken()) {
+    const sessionToken = getToken();
+    if (!sessionToken) {
       achievementsRef.current = [];
       setAchievements([]);
       setAchievementCategories([]);
@@ -103,6 +107,7 @@ export function PawTrackProvider({ children }) {
     }
 
     const mapped = mapAchievementsResponse(await api.listAchievements());
+    if (getToken() !== sessionToken) return null;
     const previous = achievementsRef.current;
     if (notify && previous.length > 0) {
       const unlocked = mapped.achievements.find((achievement) => {
@@ -189,13 +194,14 @@ export function PawTrackProvider({ children }) {
   const createAnimal = useCallback(async (payload) => {
     const animal = mapAnimal(await api.createAnimal(payload));
     setAnimals((items) => [animal, ...items.filter((item) => item.id !== animal.id)]);
-    await Promise.all([loadCurrentUser(), loadAchievements({ notify: true })]);
+    // The write already succeeded. A failed refresh must not invite a duplicate retry.
+    await Promise.allSettled([loadCurrentUser(), loadAchievements({ notify: true })]);
     return animal;
   }, [loadAchievements, loadCurrentUser]);
 
   const addSighting = useCallback(async (animalId, payload) => {
     const sighting = mapSighting(await api.addSighting(animalId, payload));
-    await Promise.all([loadAnimals(), loadCurrentUser(), loadAchievements({ notify: true })]);
+    await Promise.allSettled([loadAnimals(), loadCurrentUser(), loadAchievements({ notify: true })]);
     return sighting;
   }, [loadAchievements, loadAnimals, loadCurrentUser]);
 

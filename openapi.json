@@ -62,6 +62,29 @@
         ]
       }
     },
+    "/usuarios/me/logros": {
+      "get": {
+        "summary": "Obtener Logros Usuario",
+        "operationId": "obtener_logros_usuario_usuarios_me_logros_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LogrosUsuarioResponse"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/usuarios/": {
       "get": {
         "summary": "Obtener Usuarios",
@@ -277,6 +300,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "format": "uuid",
               "title": "Id Animal"
             }
           }
@@ -319,6 +343,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "format": "uuid",
               "title": "Id Animal"
             }
           }
@@ -374,6 +399,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "format": "uuid",
               "title": "Id Animal"
             }
           }
@@ -412,6 +438,34 @@
         }
       }
     },
+    "/usuarios/me/avistamientos": {
+      "get": {
+        "summary": "Obtener Mis Avistamientos",
+        "description": "The authenticated author's sightings; the owner is never supplied by the client.",
+        "operationId": "obtener_mis_avistamientos_usuarios_me_avistamientos_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "items": {
+                    "$ref": "#/components/schemas/AvistamientoResponse"
+                  },
+                  "type": "array",
+                  "title": "Response Obtener Mis Avistamientos Usuarios Me Avistamientos Get"
+                }
+              }
+            }
+          }
+        },
+        "security": [
+          {
+            "OAuth2PasswordBearer": []
+          }
+        ]
+      }
+    },
     "/animales/{id_animal}/historial": {
       "get": {
         "summary": "Obtener Historial Animal",
@@ -424,6 +478,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "format": "uuid",
               "title": "Id Animal"
             }
           }
@@ -459,7 +514,7 @@
     "/avistamientos/{id_avistamiento}": {
       "delete": {
         "summary": "Eliminar Avistamiento",
-        "description": "Elimina un avistamiento que el propio usuario registró (corregir un error).\n\nTransacción atómica que mantiene la integridad de TODO el grafo:\n  - Solo el autor del avistamiento puede borrarlo.\n  - No se permite borrar el ÚNICO avistamiento de un animal (dejaría al\n    animal huérfano y con ubicación obsoleta); en ese caso se responde 400.\n  - Revierte el XP otorgado en su día: -5 al autor y -1 a cada usuario cuya\n    confirmación se borra en cascada (consistente con DELETE /confirmar).\n  - Recalcula los campos desnormalizados del animal (total y última\n    ubicación/fecha) a partir de los avistamientos restantes.",
+        "description": "Elimina un avistamiento que el propio usuario registró (corregir un error).\n\nTransacción atómica que mantiene la integridad de TODO el grafo:\n  - Solo el autor del avistamiento puede borrarlo.\n  - Si no quedan avistamientos, elimina el pin vacío del animal.\n  - Revierte el XP otorgado en su día: -5 al autor y -1 a cada usuario cuya\n    confirmación se borra en cascada (consistente con DELETE /confirmar).\n  - Recalcula los campos desnormalizados del animal (total y última\n    ubicación/fecha) a partir de los avistamientos restantes.",
         "operationId": "eliminar_avistamiento_avistamientos__id_avistamiento__delete",
         "security": [
           {
@@ -473,6 +528,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "format": "uuid",
               "title": "Id Avistamiento"
             }
           }
@@ -515,6 +571,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "format": "uuid",
               "title": "Id Avistamiento"
             }
           }
@@ -557,6 +614,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "format": "uuid",
               "title": "Id Avistamiento"
             }
           }
@@ -594,6 +652,7 @@
             "required": true,
             "schema": {
               "type": "string",
+              "format": "uuid",
               "title": "Id Avistamiento"
             }
           }
@@ -627,17 +686,33 @@
     "schemas": {
       "AnimalCreate": {
         "properties": {
+          "nombre": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nombre"
+          },
           "especie": {
             "$ref": "#/components/schemas/EspeciePermitida"
           },
           "color_principal": {
             "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "pattern": "\\S",
             "title": "Color Principal"
           },
           "foto_principal": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 255
               },
               {
                 "type": "null"
@@ -647,16 +722,21 @@
           },
           "latitud": {
             "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
             "title": "Latitud"
           },
           "longitud": {
             "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
             "title": "Longitud"
           },
           "descripcion": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 255
               },
               {
                 "type": "null"
@@ -680,6 +760,17 @@
             "type": "string",
             "format": "uuid",
             "title": "Id Animal"
+          },
+          "nombre": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nombre"
           },
           "especie": {
             "$ref": "#/components/schemas/EspeciePermitida"
@@ -761,6 +852,17 @@
             "format": "uuid",
             "title": "Id Animal"
           },
+          "nombre": {
+            "anyOf": [
+              {
+                "type": "string"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nombre"
+          },
           "especie": {
             "$ref": "#/components/schemas/EspeciePermitida"
           },
@@ -816,17 +918,33 @@
       },
       "AnimalUpdate": {
         "properties": {
+          "nombre": {
+            "anyOf": [
+              {
+                "type": "string",
+                "maxLength": 80
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Nombre"
+          },
           "especie": {
             "$ref": "#/components/schemas/EspeciePermitida"
           },
           "color_principal": {
             "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "pattern": "\\S",
             "title": "Color Principal"
           },
           "foto_principal": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 255
               },
               {
                 "type": "null"
@@ -846,20 +964,26 @@
         "properties": {
           "latitud": {
             "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
             "title": "Latitud"
           },
           "longitud": {
             "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
             "title": "Longitud"
           },
           "descripcion": {
             "type": "string",
+            "maxLength": 255,
             "title": "Descripcion"
           },
           "foto_url": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 255
               },
               {
                 "type": "null"
@@ -880,20 +1004,26 @@
         "properties": {
           "latitud": {
             "type": "number",
+            "maximum": 90.0,
+            "minimum": -90.0,
             "title": "Latitud"
           },
           "longitud": {
             "type": "number",
+            "maximum": 180.0,
+            "minimum": -180.0,
             "title": "Longitud"
           },
           "descripcion": {
             "type": "string",
+            "maxLength": 255,
             "title": "Descripcion"
           },
           "foto_url": {
             "anyOf": [
               {
-                "type": "string"
+                "type": "string",
+                "maxLength": 255
               },
               {
                 "type": "null"
@@ -1012,6 +1142,29 @@
         ],
         "title": "Body_subir_imagen_upload_post"
       },
+      "CategoriaLogroResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          },
+          "icon": {
+            "type": "string",
+            "title": "Icon"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label",
+          "icon"
+        ],
+        "title": "CategoriaLogroResponse"
+      },
       "ConfirmacionResponse": {
         "properties": {
           "id_confirmacion": {
@@ -1086,6 +1239,156 @@
         ],
         "title": "ListaConfirmacionesResponse"
       },
+      "LogroResponse": {
+        "properties": {
+          "clave": {
+            "type": "string",
+            "title": "Clave"
+          },
+          "titulo": {
+            "type": "string",
+            "title": "Titulo"
+          },
+          "descripcion": {
+            "type": "string",
+            "title": "Descripcion"
+          },
+          "icono": {
+            "type": "string",
+            "title": "Icono"
+          },
+          "puntos": {
+            "type": "integer",
+            "title": "Puntos"
+          },
+          "patitas": {
+            "type": "integer",
+            "title": "Patitas"
+          },
+          "objetivo": {
+            "type": "integer",
+            "title": "Objetivo"
+          },
+          "progreso": {
+            "type": "integer",
+            "title": "Progreso"
+          },
+          "completado": {
+            "type": "boolean",
+            "title": "Completado"
+          },
+          "categoria": {
+            "type": "string",
+            "title": "Categoria"
+          },
+          "categoria_titulo": {
+            "type": "string",
+            "title": "Categoria Titulo"
+          },
+          "rareza": {
+            "type": "string",
+            "title": "Rareza"
+          },
+          "rareza_titulo": {
+            "type": "string",
+            "title": "Rareza Titulo"
+          },
+          "oculto": {
+            "type": "boolean",
+            "title": "Oculto"
+          },
+          "fecha_desbloqueo": {
+            "anyOf": [
+              {
+                "type": "string",
+                "format": "date-time"
+              },
+              {
+                "type": "null"
+              }
+            ],
+            "title": "Fecha Desbloqueo"
+          }
+        },
+        "type": "object",
+        "required": [
+          "clave",
+          "titulo",
+          "descripcion",
+          "icono",
+          "puntos",
+          "patitas",
+          "objetivo",
+          "progreso",
+          "completado",
+          "categoria",
+          "categoria_titulo",
+          "rareza",
+          "rareza_titulo",
+          "oculto"
+        ],
+        "title": "LogroResponse"
+      },
+      "LogrosUsuarioResponse": {
+        "properties": {
+          "puntos_logros": {
+            "type": "integer",
+            "title": "Puntos Logros"
+          },
+          "patitas": {
+            "type": "integer",
+            "title": "Patitas"
+          },
+          "categorias": {
+            "items": {
+              "$ref": "#/components/schemas/CategoriaLogroResponse"
+            },
+            "type": "array",
+            "title": "Categorias"
+          },
+          "rarezas": {
+            "items": {
+              "$ref": "#/components/schemas/RarezaLogroResponse"
+            },
+            "type": "array",
+            "title": "Rarezas"
+          },
+          "logros": {
+            "items": {
+              "$ref": "#/components/schemas/LogroResponse"
+            },
+            "type": "array",
+            "title": "Logros"
+          }
+        },
+        "type": "object",
+        "required": [
+          "puntos_logros",
+          "patitas",
+          "categorias",
+          "rarezas",
+          "logros"
+        ],
+        "title": "LogrosUsuarioResponse"
+      },
+      "RarezaLogroResponse": {
+        "properties": {
+          "id": {
+            "type": "string",
+            "title": "Id"
+          },
+          "label": {
+            "type": "string",
+            "title": "Label"
+          }
+        },
+        "type": "object",
+        "required": [
+          "id",
+          "label"
+        ],
+        "title": "RarezaLogroResponse"
+      },
       "Token": {
         "properties": {
           "access_token": {
@@ -1146,10 +1449,14 @@
         "properties": {
           "username": {
             "type": "string",
+            "maxLength": 50,
+            "minLength": 1,
+            "pattern": "\\S",
             "title": "Username"
           },
           "email": {
             "type": "string",
+            "maxLength": 100,
             "format": "email",
             "title": "Email"
           },
@@ -1182,6 +1489,10 @@
             "type": "integer",
             "title": "Puntos Totales"
           },
+          "puntos_logros": {
+            "type": "integer",
+            "title": "Puntos Logros"
+          },
           "nivel_actual": {
             "type": "integer",
             "title": "Nivel Actual"
@@ -1209,6 +1520,7 @@
           "id_usuario",
           "username",
           "puntos_totales",
+          "puntos_logros",
           "nivel_actual",
           "fecha_creacion",
           "animales_descubiertos",
@@ -1236,6 +1548,10 @@
           "puntos_totales": {
             "type": "integer",
             "title": "Puntos Totales"
+          },
+          "puntos_logros": {
+            "type": "integer",
+            "title": "Puntos Logros"
           },
           "nivel_actual": {
             "type": "integer",
@@ -1265,6 +1581,7 @@
           "email",
           "id_usuario",
           "puntos_totales",
+          "puntos_logros",
           "nivel_actual",
           "fecha_creacion",
           "animales_descubiertos",

@@ -14,7 +14,7 @@ from jose import JWTError, jwt
 from typing import List
 from datetime import datetime, timezone
 from pathlib import Path
-from uuid import uuid4
+from uuid import UUID, uuid4
 from contextlib import asynccontextmanager
 
 # Importaciones locales
@@ -145,8 +145,10 @@ UPLOADS_DIR = (
 # Se crea automáticamente al iniciar la app (y antes de montar StaticFiles).
 UPLOADS_DIR.mkdir(parents=True, exist_ok=True)
 
-# Límite de tamaño: 5 MB. No confiamos en Content-Length; contamos bytes reales.
-MAX_FILE_SIZE = 5 * 1024 * 1024
+# Límite de tamaño: 10 MB. No confiamos en Content-Length; contamos bytes reales.
+# El cliente comprime las fotos antes de subirlas, así que este límite actúa
+# como red de seguridad frente a archivos sin comprimir o manipulados.
+MAX_FILE_SIZE = 10 * 1024 * 1024
 UPLOAD_CHUNK_SIZE = 1024 * 1024  # 1 MB por lectura (streaming a disco)
 
 # Tipos permitidos -> extensión canónica. La extensión NUNCA proviene del
@@ -456,7 +458,7 @@ async def subir_imagen(
                     )
                     raise HTTPException(
                         status_code=status.HTTP_400_BAD_REQUEST,
-                        detail="File exceeds maximum size of 5 MB",
+                        detail="File exceeds maximum size of 10 MB",
                     )
                 buffer.write(chunk)
                 chunk = await file.read(UPLOAD_CHUNK_SIZE)
@@ -494,7 +496,7 @@ def obtener_animales(db: Session = Depends(get_db)):
     return db.query(models.Animal).all()
 
 @app.get("/animales/{id_animal}", response_model=schemas.AnimalDetalleResponse)
-def obtener_animal_detalle(id_animal: str, db: Session = Depends(get_db)):
+def obtener_animal_detalle(id_animal: UUID,db: Session = Depends(get_db)):
     animal_db = db.query(models.Animal).filter(models.Animal.id_animal == id_animal).first()
     if not animal_db:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El animal no existe.")
@@ -554,7 +556,7 @@ def registrar_nuevo_animal(
 
 @app.put("/animales/{id_animal}", response_model=schemas.AnimalResponse)
 def actualizar_animal(
-    id_animal: str, 
+    id_animal: UUID,
     animal_actualizado: schemas.AnimalUpdate, 
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user)
@@ -579,14 +581,14 @@ def actualizar_animal(
 # ==========================================
 @app.post("/animales/{id_animal}/avistamientos", response_model=schemas.AvistamientoResponse)
 def agregar_avistamiento(
-    id_animal: str,
+    id_animal: UUID,
     datos: schemas.AvistamientoCreate,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user)
 ):
     """Registra una nueva ubicación o foto para un animal que ya existe en el mapa."""
     # 1. Verificar si el animal existe
-    animal_db = db.query(models.Animal).filter(models.Animal.id_animal == id_animal).first()
+    animal_db = db.query(models.Animal).filter(models.Animal.id_animal == id_animal).with_for_update().first()
     if not animal_db:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="El animal no existe.")
 
@@ -627,8 +629,19 @@ def agregar_avistamiento(
     )
     return nuevo_avistamiento
 
+@app.get("/usuarios/me/avistamientos", response_model=List[schemas.AvistamientoResponse])
+def obtener_mis_avistamientos(
+    db: Session = Depends(get_db),
+    current_user: models.Usuario = Depends(get_current_user),
+):
+    """The authenticated author's sightings; the owner is never supplied by the client."""
+    return db.query(models.Avistamiento).filter(
+        models.Avistamiento.id_usuario == current_user.id_usuario
+    ).order_by(models.Avistamiento.fecha_creacion.desc()).all()
+
+
 @app.get("/animales/{id_animal}/historial", response_model=List[schemas.AvistamientoResponse])
-def obtener_historial_animal(id_animal: str, db: Session = Depends(get_db)):
+def obtener_historial_animal(id_animal: UUID,db: Session = Depends(get_db)):
     """Obtiene toda la ruta y el historial cronológico de un animal."""
     animal_db = db.query(models.Animal).filter(models.Animal.id_animal == id_animal).first()
     if not animal_db:
@@ -643,7 +656,7 @@ def obtener_historial_animal(id_animal: str, db: Session = Depends(get_db)):
 
 @app.delete("/avistamientos/{id_avistamiento}")
 def eliminar_avistamiento(
-    id_avistamiento: str,
+    id_avistamiento: UUID,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user)
 ):
@@ -652,8 +665,7 @@ def eliminar_avistamiento(
 
     Transacción atómica que mantiene la integridad de TODO el grafo:
       - Solo el autor del avistamiento puede borrarlo.
-      - No se permite borrar el ÚNICO avistamiento de un animal (dejaría al
-        animal huérfano y con ubicación obsoleta); en ese caso se responde 400.
+      - Si no quedan avistamientos, elimina el pin vacío del animal.
       - Revierte el XP otorgado en su día: -5 al autor y -1 a cada usuario cuya
         confirmación se borra en cascada (consistente con DELETE /confirmar).
       - Recalcula los campos desnormalizados del animal (total y última
@@ -673,14 +685,11 @@ def eliminar_avistamiento(
 
     id_animal = avistamiento.id_animal
 
-    # 2. No permitir borrar el último avistamiento de un animal (lo dejaría huérfano).
-    total_avistamientos = db.query(models.Avistamiento)\
-        .filter(models.Avistamiento.id_animal == id_animal).count()
-    if total_avistamientos <= 1:
-        raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="No puedes eliminar el único avistamiento de un animal."
-        )
+    # Serialize additions/deletions for this animal before deciding whether its pin is empty.
+    animal_db = db.query(models.Animal).filter(models.Animal.id_animal == id_animal).with_for_update().first()
+    avistamiento = db.query(models.Avistamiento).filter(models.Avistamiento.id_avistamiento == id_avistamiento).first()
+    if not animal_db or not avistamiento:
+        raise HTTPException(status_code=404, detail="Avistamiento no encontrado.")
 
     # 3. Revertir el XP de cada confirmación que se borrará en cascada.
     confirmaciones = db.query(models.Confirmacion)\
@@ -704,13 +713,16 @@ def eliminar_avistamiento(
         .filter(models.Avistamiento.id_animal == id_animal)\
         .order_by(models.Avistamiento.fecha_creacion.desc())\
         .all()
-    animal_db = db.query(models.Animal).filter(models.Animal.id_animal == id_animal).first()
     if animal_db and restantes:
         mas_reciente = restantes[0]
         animal_db.total_avistamientos = len(restantes)
         animal_db.fecha_ultimo_avistamiento = mas_reciente.fecha_creacion
         animal_db.ultima_latitud = mas_reciente.latitud
         animal_db.ultima_longitud = mas_reciente.longitud
+        animal_db.fecha_primer_avistamiento = restantes[-1].fecha_creacion
+    animal_eliminado = not restantes
+    if animal_eliminado:
+        db.delete(animal_db)
 
     commit_db(db)
 
@@ -720,14 +732,14 @@ def eliminar_avistamiento(
         id_avistamiento,
         id_animal,
     )
-    return {"mensaje": "Avistamiento eliminado exitosamente."}
+    return {"mensaje": "Avistamiento eliminado exitosamente.", "animal_eliminado": animal_eliminado}
 
 # ==========================================
 # ENDPOINTS DE CONFIRMACIONES
 # ==========================================
 @app.post("/avistamientos/{id_avistamiento}/confirmar", response_model=schemas.ConfirmacionResponse)
 def confirmar_avistamiento(
-    id_avistamiento: str, 
+    id_avistamiento: UUID,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user)
 ):
@@ -767,7 +779,7 @@ def confirmar_avistamiento(
 
 @app.delete("/avistamientos/{id_avistamiento}/confirmar")
 def eliminar_confirmacion(
-    id_avistamiento: str, 
+    id_avistamiento: UUID,
     db: Session = Depends(get_db),
     current_user: models.Usuario = Depends(get_current_user)
 ):
@@ -788,7 +800,7 @@ def eliminar_confirmacion(
     return {"mensaje": "Confirmación retirada exitosamente."}
 
 @app.get("/avistamientos/{id_avistamiento}/confirmaciones", response_model=schemas.ListaConfirmacionesResponse)
-def obtener_confirmaciones(id_avistamiento: str, db: Session = Depends(get_db)):
+def obtener_confirmaciones(id_avistamiento: UUID,db: Session = Depends(get_db)):
     avistamiento = db.query(models.Avistamiento).filter(models.Avistamiento.id_avistamiento == id_avistamiento).first()
     if not avistamiento:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Avistamiento no encontrado.")

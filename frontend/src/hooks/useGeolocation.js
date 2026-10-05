@@ -22,11 +22,11 @@ function isAppleMobileDevice() {
   return /iPad|iPhone|iPod/.test(userAgent) || (platform === "MacIntel" && hasTouch);
 }
 
-function canUseGeolocation() {
-  if (typeof window !== "undefined" && window.isSecureContext === false) {
-    return { ok: false, error: { reason: "insecure" } };
-  }
+function isInsecureContext() {
+  return typeof window !== "undefined" && window.isSecureContext === false;
+}
 
+function canUseGeolocation() {
   if (typeof navigator === "undefined" || !navigator.geolocation) {
     return { ok: false, error: { reason: "unavailable" } };
   }
@@ -93,7 +93,8 @@ export function useGeolocation({ auto = true } = {}) {
       }
 
       if (isActiveRequest()) {
-        setLocationError(locationErrorMessage(lastError));
+        const failure = isInsecureContext() ? { reason: "insecure" } : lastError;
+        setLocationError(locationErrorMessage(failure));
         setLocationHint("Puedes continuar escribiendo latitud y longitud manualmente.");
       }
       return null;
@@ -104,9 +105,12 @@ export function useGeolocation({ auto = true } = {}) {
     }
   }, [isAppleMobile]);
 
-  useEffect(() => () => {
-    mountedRef.current = false;
-    requestIdRef.current += 1;
+  useEffect(() => {
+    mountedRef.current = true;
+    return () => {
+      mountedRef.current = false;
+      requestIdRef.current += 1;
+    };
   }, []);
 
   useEffect(() => {

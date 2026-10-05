@@ -33,6 +33,27 @@ function Rect({ fill, h = 1, w = 1, x, y }) {
   return <rect fill={fill} height={h} width={w} x={x} y={y} />;
 }
 
+function PuppySprite() {
+  return (
+    <>
+      {/* Stepped outline, floppy ears, cream muzzle and a little pink tongue. */}
+      <path fill="#422414" d="M10 4h12v2h4v2h3v3h2v11h-2v3h-4v3h-4v2H11v-2H7v-3H3v-3H1V11h2V8h3V6h4z" />
+      <path fill="#e7aa58" d="M10 6h12v2h3v14h-2v3h-3v2h-8v-2H9v-3H7V8h3z" />
+      <path fill="#b96e2a" d="M5 9h3v11H6v3H3V12h2zM24 9h3v3h2v11h-3v-3h-2z" />
+      <path fill="#ffd18a" d="M11 7h10v2H11zM9 9h3v4H9z" />
+      <Rect fill="#241b1b" h={3} w={3} x={9} y={14} />
+      <Rect fill="#241b1b" h={3} w={3} x={20} y={14} />
+      <Rect fill="#fff7e7" x={9} y={14} />
+      <Rect fill="#fff7e7" x={20} y={14} />
+      <path fill="#fff0cf" d="M12 18h8v1h3v5h-3v2h-8v-2H9v-5h3z" />
+      <path fill="#241b1b" d="M13 18h6v2h-2v3h3v1h-3v1h-2v-1h-3v-1h3v-3h-2z" />
+      <Rect fill="#ed8292" h={3} w={2} x={15} y={24} />
+      <path fill="#37cad4" d="M10 28h12v2H10z" />
+      <Rect fill="#ffe08a" h={2} w={2} x={15} y={29} />
+    </>
+  );
+}
+
 function DogSprite({ colors }) {
   return (
     <>
@@ -88,7 +109,7 @@ function PetAvatar({ type = "husky", size = "md" }) {
       viewBox="0 0 32 32"
     >
       <Rect fill="rgba(46, 247, 255, 0.25)" h={2} w={20} x={6} y={30} />
-      {isCat ? <CatSprite colors={colors} /> : <DogSprite colors={colors} />}
+      {type === "puppy" ? <PuppySprite /> : isCat ? <CatSprite colors={colors} /> : <DogSprite colors={colors} />}
     </svg>
   );
 }

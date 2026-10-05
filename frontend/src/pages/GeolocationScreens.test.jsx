@@ -49,6 +49,12 @@ function renderWithContext(ui, context = {}) {
 }
 
 describe("geolocation screens", () => {
+  it("does not submit a sighting at zero coordinates when GPS is still empty", async () => {
+    renderWithContext(<ReportSighting />);
+    await userEvent.click(screen.getByRole("button", { name: "Publicar avistamiento" }));
+    expect(baseContext.addSighting).not.toHaveBeenCalled();
+    expect(screen.getByRole("alert").textContent).toContain("ubicacion valida");
+  });
   beforeEach(() => {
     geoMock.state = {
       coordinates: { latitude: "", longitude: "" },

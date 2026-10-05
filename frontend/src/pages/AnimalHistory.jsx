@@ -1,5 +1,6 @@
 import { useEffect, useState } from "react";
-import { Link, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import DeleteSightingButton from "../components/DeleteSightingButton";
 import AppShell from "../components/AppShell";
 import HeartOrnament from "../components/HeartOrnament";
 import Icon from "../components/Icon";
@@ -11,6 +12,7 @@ import { api } from "../services/api";
 
 function AnimalHistory() {
   const { animalId } = useParams();
+  const navigate = useNavigate();
   const { currentUser, loadAnimalDetail, loadAnimals, loadCurrentUser, loadHistory } = usePawTrack();
   const [animal, setAnimal] = useState(null);
   const [history, setHistory] = useState([]);
@@ -23,7 +25,11 @@ function AnimalHistory() {
     let active = true;
     Promise.resolve()
       .then(() => {
-        if (active) setLoading(true);
+        if (active) {
+          setLoading(true);
+          setError("");
+          setActionError("");
+        }
         return Promise.all([loadAnimalDetail(animalId), loadHistory(animalId)]);
       })
       .then(async ([animalResult, historyResult]) => {
@@ -55,22 +61,7 @@ function AnimalHistory() {
         confirmedByMe: !item.confirmedByMe,
         confirmations: Math.max(0, item.confirmations + (item.confirmedByMe ? -1 : 1)),
       } : item));
-      await loadCurrentUser();
-    } catch (actionFailure) {
-      setActionError(actionFailure.message);
-    } finally {
-      setActionId("");
-    }
-  };
-
-  const removeSighting = async (event) => {
-    if (!window.confirm("Eliminar este avistamiento? Esta accion no se puede deshacer.")) return;
-    setActionId(event.id);
-    setActionError("");
-    try {
-      await api.deleteSighting(event.id);
-      setHistory((items) => items.filter((item) => item.id !== event.id));
-      await Promise.all([loadAnimals(), loadCurrentUser()]);
+      await Promise.allSettled([loadAnimals(), loadCurrentUser()]);
     } catch (actionFailure) {
       setActionError(actionFailure.message);
     } finally {
@@ -111,11 +102,10 @@ function AnimalHistory() {
                       <Icon name="star" size={14} />{event.confirmedByMe ? "Retirar" : "Confirmar"}
                     </button>
                   )}
-                  {ownSighting && (
-                    <button className="mini-pixel-button danger" disabled={actionId === event.id || history.length === 1} onClick={() => removeSighting(event)} title={history.length === 1 ? "No se puede borrar el unico avistamiento" : "Eliminar"} type="button">
-                      Eliminar
-                    </button>
-                  )}
+                  <DeleteSightingButton sighting={event} onDeleted={(deleted, result) => {
+                    setHistory((items) => items.filter((item) => item.id !== deleted.id));
+                    if (result.animal_eliminado) navigate("/animals", { replace: true });
+                  }} />
                   {!currentUser && <Link className="tiny-link" to="/login">Inicia sesion para confirmar</Link>}
                 </div>
               </span>

@@ -25,6 +25,13 @@ function TestRoutes({ context = baseContext }) {
 }
 
 describe("ProtectedRoute", () => {
+  it("preserves mounted form state while refreshing an already verified profile", () => {
+    setToken("valid-token");
+    const context = { authenticated: true, userLoading: false, currentUser: { id: "a" } };
+    const { rerender } = render(<TestRoutes context={context} />);
+    rerender(<TestRoutes context={{ ...context, userLoading: true }} />);
+    expect(screen.getByText("Dashboard privado")).toBeTruthy();
+  });
   beforeEach(clearToken);
   afterEach(cleanup);
 

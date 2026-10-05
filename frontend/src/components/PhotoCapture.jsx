@@ -1,11 +1,12 @@
 import { useEffect, useId, useState } from "react";
 import { api } from "../services/api";
+import { compressImage } from "../utils/image";
 import Icon from "./Icon";
 
 const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
-const MAX_FILE_SIZE = 5 * 1024 * 1024;
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
-function PhotoCapture({ onUploaded, required = false }) {
+function PhotoCapture({ onUploaded, onUploadingChange, required = false }) {
   const inputId = useId();
   const [preview, setPreview] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -17,34 +18,44 @@ function PhotoCapture({ onUploaded, required = false }) {
   }, [preview]);
 
   const selectFile = async (event) => {
-    const file = event.target.files?.[0];
+    const input = event.currentTarget;
+    const file = input.files?.[0];
     if (!file) return;
 
     setError("");
+    setPreview("");
+    setFilename("");
     onUploaded("");
 
     if (!ACCEPTED_TYPES.includes(file.type)) {
       setError("Usa una imagen JPEG, PNG o WEBP.");
-      event.target.value = "";
+      input.value = "";
       return;
     }
 
-    if (file.size > MAX_FILE_SIZE) {
-      setError("La foto debe pesar 5 MB o menos.");
-      event.target.value = "";
-      return;
-    }
-
-    setPreview(URL.createObjectURL(file));
-    setFilename(file.name);
     setUploading(true);
+    onUploadingChange?.(true);
+
     try {
-      const result = await api.uploadImage(file);
+      let upload;
+      try {
+        upload = await compressImage(file, { maxDimension: 1600, quality: 0.8 });
+      } catch {
+        upload = file;
+      }
+      if (upload.size > MAX_FILE_SIZE) {
+        throw new Error("La foto debe pesar 10 MB o menos.");
+      }
+      setPreview(URL.createObjectURL(upload));
+      setFilename(file.name);
+      const result = await api.uploadImage(upload);
       onUploaded(result.url);
     } catch (uploadError) {
       setError(uploadError.message);
+      input.value = "";
     } finally {
       setUploading(false);
+      onUploadingChange?.(false);
     }
   };
 
@@ -53,7 +64,7 @@ function PhotoCapture({ onUploaded, required = false }) {
       {preview && <img alt="Vista previa de la foto" className="photo-preview" src={preview} />}
       <label className="capture-control" htmlFor={inputId}>
         <Icon name="camera" size={22} />
-        <span>{uploading ? "Subiendo foto..." : preview ? "Cambiar foto" : "Tomar o elegir foto"}</span>
+        <span>{uploading ? "Subiendo foto..." : preview ? "Cambiar foto" : required ? "Tomar o elegir foto" : "Añadir foto (opcional)"}</span>
         <input
           accept="image/jpeg,image/png,image/webp"
           capture="environment"

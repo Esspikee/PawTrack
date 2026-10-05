@@ -35,6 +35,7 @@ def main():
     run([python, "-m", "compileall", "-q", "main.py", "config.py", "database.py", "models.py", "schemas.py", "security.py", "smoke_test.py", "inspect_failure.py", "scripts/export_openapi.py", "scripts/deployed_readiness_check.py"])
     run([python, "scripts/export_openapi.py"])
     run([python, "-m", "pip", "check"])
+    run([python, "-m", "unittest", "discover", "-s", "tests", "-v"])
 
     run([node, "node_modules/vitest/vitest.mjs", "run", "--pool=threads", "--maxWorkers=1", "--no-file-parallelism"], cwd=FRONTEND)
     run([node, "node_modules/eslint/bin/eslint.js", "."], cwd=FRONTEND)

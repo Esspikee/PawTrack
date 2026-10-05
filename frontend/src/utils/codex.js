@@ -1,4 +1,5 @@
 import { BREEDS, CAT_BREEDS, DOG_BREEDS } from "../data/breeds";
+import breedAliases from "../data/breedAliases.json";
 import { parseBackendDate } from "./dataMappers";
 
 const typeToSpecies = {
@@ -19,12 +20,11 @@ function textMatchesBreed(value, breed) {
   const normalizedValue = normalizeCodexText(value);
   if (!normalizedValue) return false;
 
-  const breedName = normalizeCodexText(breed.displayName);
-  const breedId = normalizeCodexText(breed.id);
-  return normalizedValue.split(" ").includes(breedName)
-    || normalizedValue.includes(breedName)
-    || normalizedValue.split(" ").includes(breedId)
-    || normalizedValue.includes(breedId);
+  const aliases = [breed.displayName, breed.id, ...(breedAliases[breed.id] ?? [])];
+  return aliases.some((alias) => {
+    const normalizedAlias = normalizeCodexText(alias);
+    return normalizedAlias && ` ${normalizedValue} `.includes(` ${normalizedAlias} `);
+  });
 }
 
 export function animalMatchesBreed(animal, sighting, breed) {

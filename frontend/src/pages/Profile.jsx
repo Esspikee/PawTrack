@@ -35,7 +35,7 @@ function Profile() {
 
       <section className="profile-card">
         <HeartOrnament />
-        <PetAvatar size="md" type="golden" />
+        <PetAvatar size="md" type={currentUser.level === 1 ? "puppy" : "golden"} />
         <div>
           <strong>{currentUser.username}</strong>
           <span>Nivel {currentUser.level} - {currentUser.rank}</span>
@@ -51,6 +51,9 @@ function Profile() {
         ))}
       </section>
 
+      <Link className="menu-card settings-row" to="/my-sightings">
+        <Icon name="mapPin" /><span><strong>Mis avistamientos</strong><small>Revisa y elimina tus registros</small></span><Icon name="chevronRight" />
+      </Link>
       <Link className="menu-card settings-row" to="/settings">
         <Icon name="settings" /><span><strong>Configuracion</strong><small>Conexion y cuenta</small></span><Icon name="chevronRight" />
       </Link>

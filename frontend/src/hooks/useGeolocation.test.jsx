@@ -2,6 +2,7 @@
 import { act, cleanup, renderHook, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { useGeolocation } from "./useGeolocation";
+import { StrictMode } from "react";
 
 const successPosition = {
   coords: {
@@ -44,6 +45,14 @@ function mockAppleMobile() {
 }
 
 describe("useGeolocation", () => {
+  it("finishes locating after StrictMode replays effects", async () => {
+    mockGeolocation((resolve) => resolve(successPosition));
+    const { result } = renderHook(() => useGeolocation(), { wrapper: StrictMode });
+    await waitFor(() => {
+      expect(result.current.coordinates.latitude).toBe("4.711000");
+      expect(result.current.locating).toBe(false);
+    });
+  });
   beforeEach(() => {
     setSecureContext(true);
     setNavigatorValue("userAgent", "Mozilla/5.0");
@@ -118,7 +127,21 @@ describe("useGeolocation", () => {
     expect(result.current.locationHint).toContain("latitud y longitud");
   });
 
-  it("explains secure-context requirements before requesting GPS", async () => {
+  it("still attempts GPS on an insecure context and explains HTTPS only when it fails", async () => {
+    setSecureContext(false);
+    const getCurrentPosition = mockGeolocation((resolve, reject) => reject({ code: 1 }));
+
+    const { result } = renderHook(() => useGeolocation({ auto: false }));
+
+    await act(async () => {
+      await result.current.locate();
+    });
+
+    expect(getCurrentPosition).toHaveBeenCalled();
+    expect(result.current.locationError).toContain("HTTPS");
+  });
+
+  it("uses GPS coordinates on an insecure context when the browser still allows it", async () => {
     setSecureContext(false);
     const getCurrentPosition = mockGeolocation((resolve) => resolve(successPosition));
 
@@ -128,8 +151,9 @@ describe("useGeolocation", () => {
       await result.current.locate();
     });
 
-    expect(getCurrentPosition).not.toHaveBeenCalled();
-    expect(result.current.locationError).toContain("HTTPS");
+    expect(getCurrentPosition).toHaveBeenCalled();
+    expect(result.current.coordinates).toEqual({ latitude: "4.711000", longitude: "-74.072100" });
+    expect(result.current.locationError).toBe("");
   });
 
   it("ignores stale GPS responses when requests overlap", async () => {

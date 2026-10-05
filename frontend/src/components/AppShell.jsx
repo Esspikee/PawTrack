@@ -1,5 +1,5 @@
 import BottomNav from "./BottomNav";
-import Icon from "./Icon";
+import AchievementBadge from "./codex/AchievementBadge";
 import { usePawTrack } from "../context/usePawTrack";
 
 function AchievementToast({ achievement, onClose }) {
@@ -7,7 +7,7 @@ function AchievementToast({ achievement, onClose }) {
 
   return (
     <aside className="achievement-toast" role="status">
-      <div className="achievement-toast-icon"><Icon name={achievement.icon} /></div>
+      <div className="achievement-toast-icon" aria-hidden="true"><AchievementBadge achievement={achievement} /></div>
       <span>
         <small>Logro desbloqueado</small>
         <strong>{achievement.label}</strong>

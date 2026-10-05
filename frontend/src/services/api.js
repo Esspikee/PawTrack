@@ -84,7 +84,7 @@ async function request(path, options = {}) {
       : await response.text();
 
   if (!response.ok) {
-    if (response.status === 401 && auth) {
+    if (response.status === 401 && auth && token === getToken()) {
       clearToken();
     }
 
@@ -137,6 +137,7 @@ export const api = {
     body: JSON.stringify(data),
   }),
   getAnimalHistory: (animalId) => request(`/animales/${animalId}/historial`),
+  getMySightings: () => request("/usuarios/me/avistamientos", { auth: true }),
   deleteSighting: (sightingId) => request(`/avistamientos/${sightingId}`, {
     method: "DELETE",
     auth: true,
