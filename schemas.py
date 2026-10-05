@@ -55,6 +55,7 @@ class UsuarioCreate(UsuarioBase):
         return v
 
 class UsuarioResponse(UsuarioBase):
+    is_admin: bool = False
     id_usuario: uuid.UUID
     puntos_totales: int
     puntos_logros: int

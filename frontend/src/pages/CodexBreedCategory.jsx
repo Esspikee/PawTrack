@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/useTranslation";
 import { Navigate, useParams } from "react-router-dom";
 import AppShell from "../components/AppShell";
 import BreedCard from "../components/codex/BreedCard";
@@ -8,6 +9,7 @@ import { useCodexData } from "../hooks/useCodexData";
 import { getCategoryCopy, getEntriesByCategory, getProgress } from "../utils/codex";
 
 function CodexBreedCategory() {
+  const { t } = useTranslation();
   const { category } = useParams();
   const { codex, error, loading } = useCodexData();
 
@@ -16,8 +18,8 @@ function CodexBreedCategory() {
   const entries = getEntriesByCategory(codex, category);
   const progress = getProgress(entries);
 
-  if (loading) return <AppShell><TopBar backTo="/codex/bestiary" title={copy.title} /><StatusPanel message="Revisando descubrimientos..." /></AppShell>;
-  if (error) return <AppShell><TopBar backTo="/codex/bestiary" title={copy.title} /><StatusPanel message={error} type="error" /></AppShell>;
+  if (loading) return <AppShell><TopBar backTo="/codex/bestiary" title={copy.title} /><StatusPanel message={t("Revisando descubrimientos...")} /></AppShell>;
+  if (error) return <AppShell><TopBar backTo="/codex/bestiary" title={copy.title} /><StatusPanel message={t(error)} type="error" /></AppShell>;
 
   return (
     <AppShell>
@@ -25,7 +27,7 @@ function CodexBreedCategory() {
 
       <section className="codex-summary">
         <strong>{copy.title}</strong>
-        <small>{progress.discovered} / {progress.total} descubiertas</small>
+        <small>{progress.discovered} / {progress.total}{" "}{t("descubiertas")}</small>
         <ProgressBar percent={progress.percent} />
       </section>
 

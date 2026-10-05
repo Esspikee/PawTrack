@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/useTranslation";
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import Icon from "../components/Icon";
@@ -8,6 +9,7 @@ import { usePawTrack } from "../context/usePawTrack";
 const initialForm = { username: "", email: "", password: "", confirmPassword: "" };
 
 function Register() {
+  const { t } = useTranslation();
   const [form, setForm] = useState(initialForm);
   const [visiblePasswords, setVisiblePasswords] = useState({ password: false, confirmPassword: false });
   const [submitting, setSubmitting] = useState(false);
@@ -29,7 +31,7 @@ function Register() {
     setError("");
 
     if (form.password !== form.confirmPassword) {
-      setError("Las contrasenas no coinciden.");
+      setError(t("Las contrasenas no coinciden."));
       return;
     }
 
@@ -42,11 +44,11 @@ function Register() {
       });
       navigate("/login", {
         replace: true,
-        state: { message: "Cuenta creada. Ya puedes iniciar sesion." },
+        state: { message: t("Cuenta creada. Ya puedes iniciar sesion.") },
       });
     } catch (registerError) {
-      if (registerError.status === 409) setError(registerError.message || "El correo o usuario ya existe.");
-      else if (registerError.status === 422) setError("Escribe un correo valido y revisa los datos.");
+      if (registerError.status === 409) setError(registerError.message || t("El correo o usuario ya existe."));
+      else if (registerError.status === 422) setError(t("Escribe un correo valido y revisa los datos."));
       else setError(registerError.message);
     } finally {
       setSubmitting(false);
@@ -55,33 +57,27 @@ function Register() {
 
   return (
     <main className="auth-screen">
-      <TopBar backTo="/" title="Crear cuenta" />
+      <TopBar backTo="/" title={t("Crear cuenta")} />
       <section className="auth-card">
         <form className="auth-form" onSubmit={handleSubmit}>
-          {error && <p className="form-message error" role="alert">{error}</p>}
+          {error && <p className="form-message error" role="alert">{t(error)}</p>}
 
-          <label>
-            Usuario
-            <span className="input-wrap">
-              <input autoComplete="username" name="username" onChange={updateField} placeholder="Tu nombre de usuario" required type="text" value={form.username} />
+          <label>{t("Usuario")}<span className="input-wrap">
+              <input autoComplete="username" name="username" onChange={updateField} placeholder={t("Tu nombre de usuario")} required type="text" value={form.username} />
               <Icon name="user" size={20} />
             </span>
           </label>
 
-          <label>
-            Correo electronico
-            <span className="input-wrap">
-              <input autoComplete="email" name="email" onChange={updateField} placeholder="ejemplo@correo.com" required type="email" value={form.email} />
+          <label>{t("Correo electronico")}<span className="input-wrap">
+              <input autoComplete="email" name="email" onChange={updateField} placeholder={t("ejemplo@correo.com")} required type="email" value={form.email} />
               <Icon name="mail" size={20} />
             </span>
           </label>
 
-          <label>
-            Contrasena
-            <span className="input-wrap">
+          <label>{t("Contrasena")}<span className="input-wrap">
               <input autoComplete="new-password" name="password" onChange={updateField} placeholder="********" required type={visiblePasswords.password ? "text" : "password"} value={form.password} />
               <button
-                aria-label={visiblePasswords.password ? "Ocultar contrasena" : "Mostrar contrasena"}
+                aria-label={visiblePasswords.password ? t("Ocultar contrasena") : t("Mostrar contrasena")}
                 className="password-toggle"
                 onClick={() => togglePassword("password")}
                 type="button"
@@ -91,12 +87,10 @@ function Register() {
             </span>
           </label>
 
-          <label>
-            Confirmar contrasena
-            <span className="input-wrap">
+          <label>{t("Confirmar contrasena")}<span className="input-wrap">
               <input autoComplete="new-password" name="confirmPassword" onChange={updateField} placeholder="********" required type={visiblePasswords.confirmPassword ? "text" : "password"} value={form.confirmPassword} />
               <button
-                aria-label={visiblePasswords.confirmPassword ? "Ocultar confirmacion de contrasena" : "Mostrar confirmacion de contrasena"}
+                aria-label={visiblePasswords.confirmPassword ? t("Ocultar confirmacion de contrasena") : t("Mostrar confirmacion de contrasena")}
                 className="password-toggle"
                 onClick={() => togglePassword("confirmPassword")}
                 type="button"
@@ -107,12 +101,11 @@ function Register() {
           </label>
 
           <PixelButton className="full-width" disabled={submitting} type="submit">
-            {submitting ? "Creando..." : "Crear cuenta"}
+            {submitting ? t("Creando...") : t("Crear cuenta")}
           </PixelButton>
         </form>
 
-        <p className="auth-switch">
-          Ya tienes cuenta? <Link to="/login">Inicia sesion</Link>
+        <p className="auth-switch">{t("Ya tienes cuenta?")}{" "}<Link to="/login">{t("Inicia sesion")}</Link>
         </p>
       </section>
     </main>

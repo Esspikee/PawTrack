@@ -1,3 +1,4 @@
+import { readLanguagePreference, resolveLocale } from "../i18n/translate";
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { AUTH_TOKEN_CLEARED_EVENT, api, clearToken, getToken, hasToken, setToken } from "../services/api";
 import { mapAchievementsResponse, mapAnimal, mapSighting, mapUser } from "../utils/dataMappers";
@@ -18,12 +19,17 @@ export function PawTrackProvider({ children }) {
   const [userError, setUserError] = useState("");
   const achievementsRef = useRef([]);
   const achievementToastTimer = useRef(null);
-  const [locale, setLocale] = useState(() => {
-    if (typeof window === "undefined") {
-      return "es";
-    }
-    return window.localStorage.getItem("pawtrack-locale") || window.navigator.language?.slice(0, 2) || "es";
-  });
+  const [languagePreference, setLanguagePreference] = useState(readLanguagePreference);
+  const [browserLanguage, setBrowserLanguage] = useState(() => typeof navigator === "undefined" ? "es" : navigator.language);
+  const locale = resolveLocale(languagePreference, browserLanguage);
+  const setLocale = useCallback((value) => {
+    setLanguagePreference(["es", "en", "auto"].includes(value) ? value : "es");
+  }, []);
+  useEffect(() => {
+    const changed = () => setBrowserLanguage(navigator.language);
+    window.addEventListener("languagechange", changed);
+    return () => window.removeEventListener("languagechange", changed);
+  }, []);
 
   const loadAnimals = useCallback(async () => {
     setAnimalsLoading(true);
@@ -166,9 +172,9 @@ export function PawTrackProvider({ children }) {
       document.documentElement.lang = locale;
     }
     if (typeof window !== "undefined") {
-      window.localStorage.setItem("pawtrack-locale", locale);
+      try { window.localStorage.setItem("pawtrack-locale", languagePreference); } catch { /* Keep the in-memory choice when storage is blocked. */ }
     }
-  }, [locale]);
+  }, [locale, languagePreference]);
 
   const login = useCallback(async (email, password) => {
     const result = await api.login(email, password);
@@ -235,6 +241,7 @@ export function PawTrackProvider({ children }) {
     recentAchievement,
     register,
     locale,
+    languagePreference,
     setLocale,
     userError,
     userLoading,
@@ -261,6 +268,7 @@ export function PawTrackProvider({ children }) {
     recentAchievement,
     register,
     locale,
+    languagePreference,
     setLocale,
     userError,
     userLoading,

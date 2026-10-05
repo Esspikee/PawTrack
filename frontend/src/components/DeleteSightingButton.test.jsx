@@ -43,3 +43,8 @@ it("keeps the sighting visible when deletion fails", async () => {
   await screen.findByText("Sin permisos");
   expect(onDeleted).not.toHaveBeenCalled();
 });
+
+it("shows deletion controls for an administrator viewing another author", () => {
+  render(<PawTrackContext.Provider value={{ currentUser: { id: "admin", isAdmin: true } }}><DeleteSightingButton sighting={{ id: "s", userId: "author" }} /></PawTrackContext.Provider>);
+  expect(screen.getByRole("button")).toBeTruthy();
+});

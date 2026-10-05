@@ -1,12 +1,15 @@
+import { useTranslation } from "../../i18n/useTranslation";
 import { useState } from "react";
 import { getAchievementArt } from "../../data/achievementArt";
 import Icon from "../Icon";
 
 export default function AchievementBadge({ achievement }) {
+  const { t } = useTranslation();
   const art = getAchievementArt(achievement);
   const [failedSource, setFailedSource] = useState("");
   const src = art.asset ? `/images/achievements/${art.asset}.webp` : "";
-  return <div className={`achievement-badge badge-${art.rarity} badge-${art.state} badge-tier-${art.tier}`} role="img" aria-label={art.label}>
+  const label = art.state === "hidden" ? t("Logro oculto") : `${t(achievement.label || "Logro")}${art.tier ? ` · ${t("Nivel")} ${art.numeral}` : ""} · ${t(achievement.completed ? "Desbloqueado" : "Pendiente")}`;
+  return <div className={`achievement-badge badge-${art.rarity} badge-${art.state} badge-tier-${art.tier}`} role="img" aria-label={label}>
     <svg className="badge-frame" viewBox="0 0 64 72" aria-hidden="true" shapeRendering="crispEdges">
       <path className="badge-shield" d="M8 4h48v4h4v44h-4v4h-8v4h-8v4H24v-4h-8v-4H8v-4H4V8h4Z" />
       <path className="badge-inset" d="M12 9h40v4h3v35h-4v5h-9v5H22v-5h-9v-5H9V13h3Z" />

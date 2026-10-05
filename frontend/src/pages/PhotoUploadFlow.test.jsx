@@ -1,5 +1,5 @@
 // @vitest-environment jsdom
-import { act, cleanup, render, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { MemoryRouter } from "react-router-dom";
@@ -7,6 +7,7 @@ import { PawTrackContext } from "../context/usePawTrack";
 import { api } from "../services/api";
 import ReportSighting from "./ReportSighting";
 import PhotoCapture from "../components/PhotoCapture";
+import CreateAnimal from "./CreateAnimal";
 
 vi.mock("../utils/image", () => ({ compressImage: async (file) => file }));
 vi.mock("../hooks/useGeolocation", () => ({ useGeolocation: () => ({
@@ -21,6 +22,22 @@ describe("photo upload flow", () => {
     });
   });
   afterEach(() => { cleanup(); vi.restoreAllMocks(); vi.unstubAllGlobals(); });
+
+  it("uses English labels while preserving API species values and user-entered text", async () => {
+    vi.spyOn(api, "uploadImage").mockResolvedValue({ url: "/uploads/test.png" });
+    const createAnimal = vi.fn().mockResolvedValue({ id: "a" });
+    const { container } = render(<PawTrackContext.Provider value={{ locale: "en", createAnimal }}>
+      <MemoryRouter><CreateAnimal /></MemoryRouter>
+    </PawTrackContext.Provider>);
+    await userEvent.click(screen.getByRole("radio", { name: "Cat" }));
+    await userEvent.type(screen.getByLabelText("Main color"), "negro");
+    await userEvent.type(screen.getByLabelText("Name (optional)"), "Perro");
+    await userEvent.upload(container.querySelector('input[type="file"]'), new File(["png"], "cat.png", { type: "image/png" }));
+    await waitFor(() => expect(screen.getByRole("button", { name: "Publish sighting" }).disabled).toBe(false));
+    // jsdom does not validate the mocked FileList like a browser does.
+    fireEvent.submit(container.querySelector("form"));
+    expect(createAnimal).toHaveBeenCalledWith(expect.objectContaining({ especie: "Gato", nombre: "Perro", color_principal: "negro" }));
+  });
 
   it("requires choosing an animal instead of silently reporting the first one", async () => {
     const addSighting = vi.fn().mockResolvedValue({});

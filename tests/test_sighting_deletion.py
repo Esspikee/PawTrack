@@ -61,6 +61,21 @@ class SightingDeletionTest(unittest.TestCase):
         self.assertEqual(self.other.puntos_totales, 5)
         self.assertEqual(self.client.delete(self.url, headers=self.auth(self.owner)).status_code, 404)
 
+    def test_admin_can_delete_other_sighting_and_xp_is_charged_to_author(self):
+        self.other.is_admin = True
+        self.db.commit()
+        response = self.client.delete(self.url, headers=self.auth(self.other))
+        self.assertEqual(response.status_code, 200, response.text)
+        self.assertEqual(self.owner.puntos_totales, 5)
+        self.assertEqual(self.other.puntos_totales, 6)
+        self.assertEqual(self.db.query(models.Avistamiento).count(), 0)
+
+    def test_signup_cannot_grant_admin_permissions(self):
+        response = self.client.post("/usuarios/", json={"username": "fakeadmin", "email": "fake@example.com", "password": "test123", "is_admin": True})
+        self.assertIn(response.status_code, (200, 201), response.text)
+        user = self.db.query(models.Usuario).filter_by(username="fakeadmin").one()
+        self.assertFalse(user.is_admin)
+
     def test_preserves_other_users_sighting_and_recalculates_map(self):
         earlier = self.sighting.fecha_creacion - timedelta(days=1)
         remaining = models.Avistamiento(id_animal=self.animal.id_animal, id_usuario=self.other.id_usuario,

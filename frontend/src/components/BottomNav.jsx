@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/useTranslation";
 import { Link, useLocation } from "react-router-dom";
 import Icon from "./Icon";
 const items = [
@@ -8,12 +9,14 @@ const items = [
   { to: "/profile", label: "Perfil", icon: "user" },
 ];
 export default function BottomNav() {
+  const { t } = useTranslation();
   const { pathname } = useLocation();
   const capturing = pathname === "/animals/new" || pathname.startsWith("/report");
-  return <nav className="bottom-nav" aria-label="Navegacion principal">{items.map(item => {
-    const active = item.featured ? capturing : !capturing && (pathname === item.to || pathname.startsWith(item.to + "/"));
+  return <nav className="bottom-nav" aria-label={t("Navegacion principal")}>{items.map(item => {
+    const profilePage = item.to === "/profile" && ["/settings", "/my-sightings"].includes(pathname);
+    const active = item.featured ? capturing : !capturing && (profilePage || pathname === item.to || pathname.startsWith(item.to + "/"));
     return <Link key={item.to} className={`nav-item ${item.featured ? "featured" : ""} ${active ? "active" : ""}`} aria-current={active ? "page" : undefined} to={item.to}>
-      <Icon name={item.icon} size={item.featured ? 26 : 20} /><span>{item.label}</span>
+      <span className="nav-icon" aria-hidden="true"><Icon name={item.icon} size={24} /></span><span>{t(item.label)}</span>
     </Link>;
   })}</nav>;
 }

@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/useTranslation";
 import { useEffect, useId, useState } from "react";
 import { api } from "../services/api";
 import { compressImage } from "../utils/image";
@@ -7,6 +8,7 @@ const ACCEPTED_TYPES = ["image/jpeg", "image/png", "image/webp"];
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 
 function PhotoCapture({ onUploaded, onUploadingChange, required = false }) {
+  const { t } = useTranslation();
   const inputId = useId();
   const [preview, setPreview] = useState("");
   const [uploading, setUploading] = useState(false);
@@ -28,7 +30,7 @@ function PhotoCapture({ onUploaded, onUploadingChange, required = false }) {
     onUploaded("");
 
     if (!ACCEPTED_TYPES.includes(file.type)) {
-      setError("Usa una imagen JPEG, PNG o WEBP.");
+      setError(t("Usa una imagen JPEG, PNG o WEBP."));
       input.value = "";
       return;
     }
@@ -44,7 +46,7 @@ function PhotoCapture({ onUploaded, onUploadingChange, required = false }) {
         upload = file;
       }
       if (upload.size > MAX_FILE_SIZE) {
-        throw new Error("La foto debe pesar 10 MB o menos.");
+        throw new Error(t("La foto debe pesar 10 MB o menos."));
       }
       setPreview(URL.createObjectURL(upload));
       setFilename(file.name);
@@ -61,10 +63,10 @@ function PhotoCapture({ onUploaded, onUploadingChange, required = false }) {
 
   return (
     <div className="photo-capture">
-      {preview && <img alt="Vista previa de la foto" className="photo-preview" src={preview} />}
+      {preview && <img alt={t("Vista previa de la foto")} className="photo-preview" src={preview} />}
       <label className="capture-control" htmlFor={inputId}>
         <Icon name="camera" size={22} />
-        <span>{uploading ? "Subiendo foto..." : preview ? "Cambiar foto" : required ? "Tomar o elegir foto" : "Añadir foto (opcional)"}</span>
+        <span>{uploading ? t("Subiendo foto...") : preview ? t("Cambiar foto") : required ? t("Tomar o elegir foto") : t("Añadir foto (opcional)")}</span>
         <input
           accept="image/jpeg,image/png,image/webp"
           capture="environment"
@@ -76,7 +78,7 @@ function PhotoCapture({ onUploaded, onUploadingChange, required = false }) {
         />
       </label>
       {filename && <small className="capture-filename">{filename}</small>}
-      {error && <p className="form-message error">{error}</p>}
+      {error && <p className="form-message error">{t(error)}</p>}
     </div>
   );
 }

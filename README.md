@@ -19,6 +19,9 @@ build can also be served by FastAPI on the same address; see `RUN_ON_MY_PC.md`.
 
 Users can manage their own sightings under **Perfil → Mis avistamientos**, or
 delete them from an animal's history. The API verifies the signed-in author.
+Administrators (`usuarios.is_admin`, assigned directly by the server operator)
+can also delete other users' sightings from animal history. Registration cannot
+grant this permission. Deletion reverses the original author's XP.
 Deleting an animal's last sighting also removes its empty map pin; the UI asks
 for confirmation before deletion.
 

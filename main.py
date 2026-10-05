@@ -84,6 +84,13 @@ def ensure_achievement_columns() -> None:
         connection.execute(text("UPDATE usuarios SET puntos_logros = 0 WHERE puntos_logros IS NULL"))
 
 
+def ensure_admin_column() -> None:
+    columns = {column["name"] for column in inspect(engine).get_columns("usuarios")}
+    if "is_admin" not in columns:
+        with engine.begin() as connection:
+            connection.execute(text("ALTER TABLE usuarios ADD COLUMN is_admin BOOLEAN NOT NULL DEFAULT FALSE"))
+
+
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # --- startup ---
@@ -92,6 +99,7 @@ async def lifespan(app: FastAPI):
     # 2. Aplicar migraciones ligeras para bases existentes.
     ensure_optional_animal_name_column()
     ensure_achievement_columns()
+    ensure_admin_column()
     # 3. Sembrar los niveles base (idempotente).
     seed_niveles()
     logger.info(
@@ -664,7 +672,7 @@ def eliminar_avistamiento(
     Elimina un avistamiento que el propio usuario registró (corregir un error).
 
     Transacción atómica que mantiene la integridad de TODO el grafo:
-      - Solo el autor del avistamiento puede borrarlo.
+      - Solo el autor o un administrador puede borrarlo.
       - Si no quedan avistamientos, elimina el pin vacío del animal.
       - Revierte el XP otorgado en su día: -5 al autor y -1 a cada usuario cuya
         confirmación se borra en cascada (consistente con DELETE /confirmar).
@@ -676,8 +684,8 @@ def eliminar_avistamiento(
     if not avistamiento:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Avistamiento no encontrado.")
 
-    # 1. Autorización: solo el autor puede borrar su avistamiento.
-    if str(avistamiento.id_usuario) != str(current_user.id_usuario):
+    # Permissions come from the database, never from request data or an email match.
+    if not current_user.is_admin and str(avistamiento.id_usuario) != str(current_user.id_usuario):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="No tienes permisos para eliminar este avistamiento."
@@ -701,8 +709,9 @@ def eliminar_avistamiento(
             actualizar_nivel_usuario(confirmador, db)
 
     # 4. Revertir el XP que se otorgó al autor por crear este avistamiento.
-    current_user.puntos_totales = max(0, current_user.puntos_totales - 5)
-    actualizar_nivel_usuario(current_user, db)
+    author = avistamiento.usuario
+    author.puntos_totales = max(0, author.puntos_totales - 5)
+    actualizar_nivel_usuario(author, db)
 
     # 5. Borrar el avistamiento (sus confirmaciones caen por cascade) y persistir.
     db.delete(avistamiento)

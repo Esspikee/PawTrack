@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/useTranslation";
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import AppShell from "../components/AppShell";
@@ -9,6 +10,7 @@ import { api } from "../services/api";
 import { mapSighting } from "../utils/dataMappers";
 
 export default function MySightings() {
+  const { t, dateTime } = useTranslation();
   const { currentUser, animals = [] } = usePawTrack();
   const [sightings, setSightings] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -29,23 +31,23 @@ export default function MySightings() {
   }, [currentUser?.id, attempt]);
 
   return <AppShell>
-    <TopBar backTo="/profile" title="Mis avistamientos" />
-    {notice && <p role="status">{notice}</p>}
-    {loading ? <StatusPanel message="Cargando tus avistamientos..." /> : error ?
-      <StatusPanel message={error} type="error" action={() => setAttempt((value) => value + 1)} /> :
-      sightings.length === 0 ? <StatusPanel message="Aún no tienes avistamientos. Tus próximos registros aparecerán aquí." /> :
-      <section className="my-sightings-list" aria-label="Tus avistamientos">
+    <TopBar backTo="/profile" title={t("Mis avistamientos")} />
+    {notice && <p role="status">{t(notice)}</p>}
+    {loading ? <StatusPanel message={t("Cargando tus avistamientos...")} /> : error ?
+      <StatusPanel message={t(error)} type="error" action={() => setAttempt((value) => value + 1)} /> :
+      sightings.length === 0 ? <StatusPanel message={t("Aún no tienes avistamientos. Tus próximos registros aparecerán aquí.")} /> :
+      <section className="my-sightings-list" aria-label={t("Tus avistamientos")}>
         {sightings.map((sighting) => <article className="my-sighting-card" key={sighting.id}>
           <Link className="inline-action" to={`/animals/${sighting.animalId}`}>
-            {animals.find((animal) => animal.id === sighting.animalId)?.name || "Ver animal"}
+            {animals.find((animal) => animal.id === sighting.animalId)?.name || t("Ver animal")}
           </Link>
-          <small>{sighting.date} · {sighting.time}</small>
+          <small>{dateTime(sighting.createdAt).date} · {dateTime(sighting.createdAt).time}</small>
           <p>{sighting.description}</p>
           <small>{sighting.location}</small>
-          {sighting.photoUrl && <img className="history-photo" src={sighting.photoUrl} alt="Tu avistamiento" />}
+          {sighting.photoUrl && <img className="history-photo" src={sighting.photoUrl} alt={t("Tu avistamiento")} />}
           <DeleteSightingButton sighting={sighting} onDeleted={(deleted) => {
             setSightings((items) => items.filter((item) => item.id !== deleted.id));
-            setNotice("Avistamiento eliminado.");
+            setNotice(t("Avistamiento eliminado."));
           }} />
         </article>)}
       </section>}

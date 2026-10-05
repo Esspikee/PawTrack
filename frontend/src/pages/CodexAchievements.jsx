@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/useTranslation";
 import { useEffect, useMemo } from "react";
 import AppShell from "../components/AppShell";
 import Icon from "../components/Icon";
@@ -17,11 +18,12 @@ const fallbackCategories = [
 ];
 
 function AchievementProgress({ achievement }) {
+  const { t } = useTranslation();
   if (achievement.hidden && !achievement.completed) {
     return (
       <div className="achievement-progress muted">
         <div className="codex-progress-bar"><span style={{ width: "0%" }} /></div>
-        <small>Progreso oculto</small>
+        <small>{t("Progreso oculto")}</small>
       </div>
     );
   }
@@ -35,6 +37,7 @@ function AchievementProgress({ achievement }) {
 }
 
 function AchievementCard({ achievement }) {
+  const { t } = useTranslation();
   const lockedHidden = achievement.hidden && !achievement.completed;
 
   return (
@@ -43,18 +46,18 @@ function AchievementCard({ achievement }) {
         <Icon name={lockedHidden ? "lock" : achievement.icon} />
       </div>
       <span className="achievement-card-copy">
-        <strong>{achievement.label}</strong>
-        <small>{achievement.detail}</small>
+        <strong>{t(achievement.label)}</strong>
+        <small>{t(achievement.detail)}</small>
         <AchievementProgress achievement={achievement} />
       </span>
       <span className="achievement-card-meta">
-        {achievement.completed ? <em className="completion-badge"><Icon name="check" size={12} />Completado</em> : <em>Pendiente</em>}
+        {achievement.completed ? <em className="completion-badge"><Icon name="check" size={12} />{t("Completado")}</em> : <em>{t("Pendiente")}</em>}
         {lockedHidden ? (
-          <small>Oculto</small>
+          <small>{t("Oculto")}</small>
         ) : (
           <>
-            <small>{achievement.pawPrintReward} Patitas</small>
-            <small>{achievement.rarityLabel}</small>
+            <small>{achievement.pawPrintReward}{" "}{t("Patitas")}</small>
+            <small>{t(achievement.rarityLabel)}</small>
           </>
         )}
       </span>
@@ -63,6 +66,7 @@ function AchievementCard({ achievement }) {
 }
 
 function CodexAchievements() {
+  const { t } = useTranslation();
   const {
     achievementCategories,
     achievementPoints,
@@ -85,22 +89,22 @@ function CodexAchievements() {
 
   return (
     <AppShell>
-      <TopBar backTo="/codex" title="Logros" />
+      <TopBar backTo="/codex" title={t("Logros")} />
 
       <section className="achievements-summary codex-summary">
         <Icon name="paw" size={30} />
         <span>
-          <small>Total de Patitas</small>
-          <strong>{achievementPoints} Patitas</strong>
+          <small>{t("Total de Patitas")}</small>
+          <strong>{achievementPoints}{" "}{t("Patitas")}</strong>
         </span>
       </section>
 
-      {userError && <StatusPanel message={userError} type="error" />}
+      {userError && <StatusPanel message={t(userError)} type="error" />}
 
       {groupedAchievements.length === 0 ? (
         <section className="codex-placeholder">
           <Icon name="trophy" size={34} />
-          <strong>No hay logros disponibles</strong>
+          <strong>{t("No hay logros disponibles")}</strong>
         </section>
       ) : (
         <section className="achievement-category-list">

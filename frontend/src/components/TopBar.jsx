@@ -1,8 +1,10 @@
+import { useTranslation } from "../i18n/useTranslation";
 import { useNavigate } from "react-router-dom";
 import Icon from "./Icon";
 import PixelDivider from "./PixelDivider";
 
 function TopBar({ action = "menu", actionLabel, actionTo = "/dashboard", onAction, title, backTo }) {
+  const { t } = useTranslation();
   const navigate = useNavigate();
 
   const goBack = () => {
@@ -23,15 +25,15 @@ function TopBar({ action = "menu", actionLabel, actionTo = "/dashboard", onActio
     }
   };
 
-  const label = actionLabel || (action === "search" ? "Buscar" : "Menu");
+  const label = actionLabel || (action === "search" ? t("Buscar") : t("Menu"));
 
   return (
     <header className="top-bar">
-      <button aria-label="Volver" className="icon-button" onClick={goBack}>
+      <button aria-label={t("Volver")} className="icon-button" onClick={goBack}>
         <Icon name="arrowLeft" />
       </button>
       <h1>{title}</h1>
-      <button aria-label={label} className="icon-button" onClick={handleAction} type="button">
+      <button aria-label={t(label)} className="icon-button" onClick={handleAction} type="button">
         <Icon name={action === "search" ? "search" : "menu"} />
       </button>
       <PixelDivider compact />

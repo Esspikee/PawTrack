@@ -1,3 +1,4 @@
+import { translate } from "../i18n/translate";
 import { assetUrl } from "../services/api";
 
 const rankByLevel = {
@@ -28,13 +29,13 @@ export function formatCoordinates(latitude, longitude) {
   return `${Number(latitude).toFixed(5)}, ${Number(longitude).toFixed(5)}`;
 }
 
-export function formatRelativeTime(value) {
-  if (!value) return "Sin fecha";
+export function formatRelativeTime(value, locale = "es") {
+  if (!value) return translate(locale, "Sin fecha");
   const timestamp = parseBackendDate(value).getTime();
-  if (Number.isNaN(timestamp)) return "Sin fecha";
+  if (Number.isNaN(timestamp)) return translate(locale, "Sin fecha");
 
   const seconds = Math.round((timestamp - Date.now()) / 1000);
-  const formatter = new Intl.RelativeTimeFormat("es", { numeric: "auto" });
+  const formatter = new Intl.RelativeTimeFormat(locale, { numeric: "auto" });
   const ranges = [
     [31536000, "year"],
     [2592000, "month"],
@@ -53,14 +54,14 @@ export function formatRelativeTime(value) {
   return formatter.format(seconds, "second");
 }
 
-export function formatDateTime(value) {
-  if (!value) return { date: "Sin fecha", time: "" };
+export function formatDateTime(value, locale = "es") {
+  if (!value) return { date: translate(locale, "Sin fecha"), time: "" };
   const date = parseBackendDate(value);
-  if (Number.isNaN(date.getTime())) return { date: "Sin fecha", time: "" };
+  if (Number.isNaN(date.getTime())) return { date: translate(locale, "Sin fecha"), time: "" };
 
   return {
-    date: new Intl.DateTimeFormat("es-CO", { dateStyle: "medium" }).format(date),
-    time: new Intl.DateTimeFormat("es-CO", { hour: "2-digit", minute: "2-digit" }).format(date),
+    date: new Intl.DateTimeFormat(locale === "en" ? "en-US" : "es-CO", { dateStyle: "medium" }).format(date),
+    time: new Intl.DateTimeFormat(locale === "en" ? "en-US" : "es-CO", { hour: "2-digit", minute: "2-digit" }).format(date),
   };
 }
 
@@ -175,6 +176,7 @@ export function mapUser(raw) {
     id: raw.id_usuario,
     username: raw.username,
     email: raw.email,
+    isAdmin: raw.is_admin === true,
     points,
     achievementPoints: raw.puntos_logros ?? 0,
     level,

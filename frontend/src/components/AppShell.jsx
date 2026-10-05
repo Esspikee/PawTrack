@@ -1,19 +1,21 @@
+import { useTranslation } from "../i18n/useTranslation";
 import BottomNav from "./BottomNav";
 import AchievementBadge from "./codex/AchievementBadge";
 import { usePawTrack } from "../context/usePawTrack";
 
 function AchievementToast({ achievement, onClose }) {
+  const { t } = useTranslation();
   if (!achievement) return null;
 
   return (
     <aside className="achievement-toast" role="status">
       <div className="achievement-toast-icon" aria-hidden="true"><AchievementBadge achievement={achievement} /></div>
       <span>
-        <small>Logro desbloqueado</small>
-        <strong>{achievement.label}</strong>
-        <em>+{achievement.points} Patitas</em>
+        <small>{t("Logro desbloqueado")}</small>
+        <strong>{t(achievement.label)}</strong>
+        <em>+{achievement.points}{" "}{t("Patitas")}</em>
       </span>
-      <button aria-label="Cerrar logro" onClick={onClose} type="button">x</button>
+      <button aria-label={t("Cerrar logro")} onClick={onClose} type="button">x</button>
     </aside>
   );
 }

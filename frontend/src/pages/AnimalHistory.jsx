@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/useTranslation";
 import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import DeleteSightingButton from "../components/DeleteSightingButton";
@@ -11,6 +12,7 @@ import { usePawTrack } from "../context/usePawTrack";
 import { api } from "../services/api";
 
 function AnimalHistory() {
+  const { t, dateTime, animalName } = useTranslation();
   const { animalId } = useParams();
   const navigate = useNavigate();
   const { currentUser, loadAnimalDetail, loadAnimals, loadCurrentUser, loadHistory } = usePawTrack();
@@ -69,20 +71,20 @@ function AnimalHistory() {
     }
   };
 
-  if (loading) return <AppShell><TopBar backTo={`/animals/${animalId}`} title="Historial" /><StatusPanel message="Cargando historial..." /></AppShell>;
-  if (error || !animal) return <AppShell><TopBar backTo="/animals" title="Historial" /><StatusPanel message={error || "Historial no disponible."} type="error" /></AppShell>;
+  if (loading) return <AppShell><TopBar backTo={`/animals/${animalId}`} title={t("Historial")} /><StatusPanel message={t("Cargando historial...")} /></AppShell>;
+  if (error || !animal) return <AppShell><TopBar backTo="/animals" title={t("Historial")} /><StatusPanel message={error || t("Historial no disponible.")} type="error" /></AppShell>;
 
   return (
     <AppShell>
-      <TopBar backTo={`/animals/${animal.id}`} title="Historial" />
+      <TopBar backTo={`/animals/${animal.id}`} title={t("Historial")} />
 
       <section className="history-summary">
         <HeartOrnament />
         <Icon name="mapPin" />
-        <span><strong>{animal.name}</strong><small>{history.length} registros de avistamiento</small></span>
+        <span><strong>{animalName(animal)}</strong><small>{history.length}{" "}{t("registros de avistamiento")}</small></span>
       </section>
 
-      {actionError && <p className="form-message error" role="alert">{actionError}</p>}
+      {actionError && <p className="form-message error" role="alert">{t(actionError)}</p>}
 
       <section className="history-list">
         {history.map((event) => {
@@ -92,21 +94,21 @@ function AnimalHistory() {
               <div className="history-dot" />
               <span>
                 <strong>{event.location}</strong>
-                <small>{event.date} · {event.time}</small>
+                <small>{dateTime(event.createdAt).date} · {dateTime(event.createdAt).time}</small>
                 <p>{event.description}</p>
-                {event.photoUrl && <img alt="Avistamiento" className="history-photo" src={event.photoUrl} />}
-                <small>{event.confirmations} confirmaciones</small>
+                {event.photoUrl && <img alt={t("Avistamiento")} className="history-photo" src={event.photoUrl} />}
+                <small>{event.confirmations}{" "}{t("confirmaciones")}</small>
                 <div className="history-actions">
                   {currentUser && !ownSighting && (
                     <button className={`mini-pixel-button ${event.confirmedByMe ? "active" : ""}`} disabled={actionId === event.id} onClick={() => toggleConfirmation(event)} type="button">
-                      <Icon name="star" size={14} />{event.confirmedByMe ? "Retirar" : "Confirmar"}
+                      <Icon name="star" size={14} />{event.confirmedByMe ? t("Retirar") : t("Confirmar")}
                     </button>
                   )}
                   <DeleteSightingButton sighting={event} onDeleted={(deleted, result) => {
                     setHistory((items) => items.filter((item) => item.id !== deleted.id));
                     if (result.animal_eliminado) navigate("/animals", { replace: true });
                   }} />
-                  {!currentUser && <Link className="tiny-link" to="/login">Inicia sesion para confirmar</Link>}
+                  {!currentUser && <Link className="tiny-link" to="/login">{t("Inicia sesion para confirmar")}</Link>}
                 </div>
               </span>
             </article>
@@ -114,8 +116,8 @@ function AnimalHistory() {
         })}
       </section>
 
-      <PixelButton className="full-width" to={`/report/${animal.id}`}>Nuevo avistamiento</PixelButton>
-      <Link className="inline-action" to={`/animals/${animal.id}`}>Volver al detalle</Link>
+      <PixelButton className="full-width" to={`/report/${animal.id}`}>{t("Nuevo avistamiento")}</PixelButton>
+      <Link className="inline-action" to={`/animals/${animal.id}`}>{t("Volver al detalle")}</Link>
     </AppShell>
   );
 }

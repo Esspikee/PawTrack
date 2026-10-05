@@ -1,3 +1,4 @@
+import { useTranslation } from "../i18n/useTranslation";
 import { useCallback, useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import AppShell from "../components/AppShell";
@@ -10,7 +11,8 @@ import { usePawTrack } from "../context/usePawTrack";
 import { API_BASE_URL, api } from "../services/api";
 
 function Settings() {
-  const { currentUser, locale, logout, setLocale } = usePawTrack();
+  const { t } = useTranslation();
+  const { currentUser, locale, languagePreference, logout, setLocale } = usePawTrack();
   const [health, setHealth] = useState(null);
   const [loadingHealth, setLoadingHealth] = useState(true);
   const [healthError, setHealthError] = useState("");
@@ -43,91 +45,88 @@ function Settings() {
 
   return (
     <AppShell>
-      <TopBar backTo="/profile" title="Configuracion" />
+      <TopBar backTo="/profile" title={t("Configuracion")} />
 
       <section className="history-summary settings-summary">
         <HeartOrnament />
         <Icon name="settings" />
         <span>
-          <strong>Centro PawTrack</strong>
-          <small>{currentUser ? `Sesion de ${currentUser.username}` : "Sesion comunitaria"}</small>
+          <strong>{t("Centro PawTrack")}</strong>
+          <small>{currentUser ? t("Sesion de {0}", {0: currentUser.username}) : t("Sesion comunitaria")}</small>
         </span>
       </section>
 
       <section className="profile-stats settings-panel">
-        <h2>Conexion</h2>
+        <h2>{t("Conexion")}</h2>
         {loadingHealth ? (
-          <StatusPanel message="Revisando API..." />
+          <StatusPanel message={t("Revisando API...")} />
         ) : healthError ? (
-          <StatusPanel action={checkHealth} message={healthError} type="error" />
+          <StatusPanel action={checkHealth} message={t(healthError)} type="error" />
         ) : (
           <>
             <div className="profile-row settings-status-row">
               <Icon name="star" />
-              <span>Estado API</span>
+              <span>{t("Estado API")}</span>
               <strong>OK</strong>
             </div>
             <div className="settings-copy-row">
-              <small>URL base</small>
+              <small>{t("URL base")}</small>
               <strong>{API_BASE_URL}</strong>
             </div>
             <div className="settings-copy-row">
-              <small>Ambiente</small>
-              <strong>{health?.environment || "No disponible"}</strong>
+              <small>{t("Ambiente")}</small>
+              <strong>{health?.environment || t("No disponible")}</strong>
             </div>
             <div className="settings-copy-row">
-              <small>Version del backend</small>
-              <strong>{health?.version || "No disponible"}</strong>
+              <small>{t("Version del backend")}</small>
+              <strong>{health?.version || t("No disponible")}</strong>
             </div>
           </>
         )}
       </section>
 
       <section className="profile-stats settings-panel">
-        <h2>Cuenta</h2>
+        <h2>{t("Cuenta")}</h2>
         <div className="settings-copy-row">
-          <small>Usuario</small>
-          <strong>{currentUser?.username || "Sin usuario"}</strong>
+          <small>{t("Usuario")}</small>
+          <strong>{currentUser?.username || t("Sin usuario")}</strong>
         </div>
         <div className="settings-copy-row">
-          <small>Correo</small>
-          <strong>{currentUser?.email || "No disponible"}</strong>
+          <small>{t("Correo")}</small>
+          <strong>{currentUser?.email || t("No disponible")}</strong>
         </div>
       </section>
 
       <section className="profile-stats settings-panel">
-        <h2>Idioma</h2>
+        <h2>{t("Idioma")}</h2>
         <div className="settings-copy-row">
-          <small>Preferencia</small>
-          <strong>{locale === "en" ? "Inglés" : "Español"}</strong>
+          <small>{t("Preferencia")}</small>
+          <strong>{locale === "en" ? t("Inglés") : t("Español")}</strong>
         </div>
-        <p className="settings-note">
-          Disponible en iOS y en navegador. La app guarda el idioma elegido en este dispositivo.
-        </p>
-        <div className="settings-language-grid" role="group" aria-label="Seleccion de idioma">
+        <p className="settings-note">{t("Disponible en iOS y en navegador. La app guarda el idioma elegido en este dispositivo.")}</p>
+        <div className="settings-language-grid" role="group" aria-label={t("Seleccion de idioma")}>
           {[
-            { code: "es", label: "Español" },
-            { code: "en", label: "Inglés" },
-            { code: "auto", label: "Auto" },
+            { code: "es", label: t("Español") },
+            { code: "en", label: t("Inglés") },
+            { code: "auto", label: t("Auto") },
           ].map((option) => (
             <button
               key={option.code}
-              className={`language-chip ${locale === option.code ? "is-active" : ""}`}
-              onClick={() => setLocale(option.code === "auto" ? window.navigator.language?.slice(0, 2) || "es" : option.code)}
+              className={`language-chip ${languagePreference === option.code ? "is-active" : ""}`}
+              aria-pressed={languagePreference === option.code}
+              onClick={() => setLocale(option.code)}
               type="button"
             >
-              {option.label}
+              {t(option.label)}
             </button>
           ))}
         </div>
       </section>
 
       <div className="stack-actions">
-        <PixelButton className="full-width" onClick={checkHealth} type="button" variant="secondary">
-          Revisar conexion
-        </PixelButton>
+        <PixelButton className="full-width" onClick={checkHealth} type="button" variant="secondary">{t("Revisar conexion")}</PixelButton>
         <button className="menu-card settings-row danger-row" onClick={closeSession} type="button">
-          <Icon name="lock" /><span><strong>Cerrar sesion</strong><small>Salir de este dispositivo</small></span><Icon name="chevronRight" />
+          <Icon name="lock" /><span><strong>{t("Cerrar sesion")}</strong><small>{t("Salir de este dispositivo")}</small></span><Icon name="chevronRight" />
         </button>
       </div>
     </AppShell>

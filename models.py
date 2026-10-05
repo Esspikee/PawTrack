@@ -1,4 +1,4 @@
-from sqlalchemy import CHAR, Column, String, Integer, Float, ForeignKey, DateTime, Enum as SQLEnum, UniqueConstraint
+from sqlalchemy import Boolean, CHAR, Column, String, Integer, Float, ForeignKey, DateTime, Enum as SQLEnum, UniqueConstraint
 from sqlalchemy.dialects.postgresql import UUID as PG_UUID
 from sqlalchemy.orm import relationship
 from sqlalchemy.types import TypeDecorator
@@ -60,6 +60,7 @@ class Usuario(Base):
     username = Column(String(50), unique=True, nullable=False)
     email = Column(String(100), unique=True, nullable=False)
     password = Column(String(255), nullable=False)
+    is_admin = Column(Boolean, default=False, server_default="false", nullable=False)
     puntos_totales = Column(Integer, default=0)
     puntos_logros = Column(Integer, default=0, nullable=False)
     nivel_actual = Column(Integer, ForeignKey("niveles.nivel"), default=1)

@@ -1,3 +1,5 @@
+import LevelSprite from "./LevelSprite";
+
 const palettes = {
   cat: {
     dark: "#09090f",
@@ -109,7 +111,7 @@ function PetAvatar({ type = "husky", size = "md" }) {
       viewBox="0 0 32 32"
     >
       <Rect fill="rgba(46, 247, 255, 0.25)" h={2} w={20} x={6} y={30} />
-      {type === "puppy" ? <PuppySprite /> : isCat ? <CatSprite colors={colors} /> : <DogSprite colors={colors} />}
+      {type.startsWith("level-") ? <LevelSprite type={type} /> : type === "puppy" ? <PuppySprite /> : isCat ? <CatSprite colors={colors} /> : <DogSprite colors={colors} />}
     </svg>
   );
 }
